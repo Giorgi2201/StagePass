@@ -54,7 +54,7 @@ export interface RawSong {
 export interface RawSet {
   name?: string;
   encore?: number;
-  song?: RawSong[];
+  song?: RawSong[] | RawSong;
 }
 
 export interface RawSetlist {
@@ -66,8 +66,8 @@ export interface RawSetlist {
   venue?: RawVenue;
   tour?: RawTour;
   sets?: {
-    set?: RawSet[];
-  };
+    set?: RawSet[] | RawSet;
+  } | string;
   info?: string;
   url?: string;
 }

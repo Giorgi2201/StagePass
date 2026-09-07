@@ -4,8 +4,10 @@ import type {
   NormalizedTrack,
   RawArtist,
   RawArtistSearchResponse,
+  RawSet,
   RawSetlist,
   RawSetlistsResponse,
+  RawSong,
   SetlistParseResult,
 } from "@/types/setlist";
 
@@ -95,37 +97,147 @@ export async function searchArtists(query: string): Promise<NormalizedArtist[]> 
 }
 
 /**
- * Helper to count valid non-tape songs in a raw setlist
+ * Safely extracts an array of RawSet objects from a RawSetlist,
+ * handling Setlist.fm quirks where `sets` can be empty string, null,
+ * or `sets.set` can be a single object instead of an array.
  */
-function countSongsInSetlist(setlist: RawSetlist): number {
-  if (!setlist.sets?.set) return 0;
-  return setlist.sets.set.reduce((total, set) => {
-    const songs = set.song || [];
-    const validSongs = songs.filter((s) => !s.tape && s.name?.trim());
-    return total + validSongs.length;
-  }, 0);
+export function extractRawSets(setlist: RawSetlist): RawSet[] {
+  if (!setlist || !setlist.sets || typeof setlist.sets !== "object") {
+    return [];
+  }
+
+  const rawSet = (setlist.sets as { set?: unknown }).set;
+  if (!rawSet) {
+    return [];
+  }
+
+  if (Array.isArray(rawSet)) {
+    return rawSet.filter(
+      (s): s is RawSet => Boolean(s && typeof s === "object")
+    );
+  }
+
+  if (typeof rawSet === "object" && rawSet !== null) {
+    return [rawSet as RawSet];
+  }
+
+  return [];
 }
 
 /**
- * Get recent shows for an artist, filtering out shows with 0 recorded songs
+ * Safely extracts an array of RawSong objects from a set.song field,
+ * handling cases where `song` is a single object, an array, empty string, or undefined.
+ */
+export function extractRawSongs(songField: unknown): RawSong[] {
+  if (!songField) {
+    return [];
+  }
+
+  if (Array.isArray(songField)) {
+    return songField.filter(
+      (s): s is RawSong =>
+        Boolean(
+          s &&
+            typeof s === "object" &&
+            "name" in s &&
+            typeof (s as { name: unknown }).name === "string"
+        )
+    );
+  }
+
+  if (
+    typeof songField === "object" &&
+    songField !== null &&
+    "name" in songField &&
+    typeof (songField as { name: unknown }).name === "string"
+  ) {
+    return [songField as RawSong];
+  }
+
+  return [];
+}
+
+/**
+ * Robust helper to count valid, non-tape songs in a raw setlist.
+ * Handles all Setlist.fm JSON variations without throwing runtime errors.
+ */
+export function countSongsInSetlist(setlist: RawSetlist): number {
+  const sets = extractRawSets(setlist);
+  if (sets.length === 0) return 0;
+
+  let count = 0;
+  for (const set of sets) {
+    const songs = extractRawSongs(set.song);
+    for (const s of songs) {
+      if (!s.tape && s.name && typeof s.name === "string" && s.name.trim()) {
+        count++;
+      }
+    }
+  }
+
+  return count;
+}
+
+/**
+ * Safely parses "DD-MM-YYYY" into a numeric timestamp for sorting descending
+ */
+export function parseEventDate(dateStr?: string): number {
+  if (!dateStr) return 0;
+  const parts = dateStr.split("-");
+  if (parts.length === 3) {
+    const day = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1;
+    const year = parseInt(parts[2], 10);
+    return new Date(year, month, day).getTime();
+  }
+  return 0;
+}
+
+/**
+ * Get recent shows for an artist, filtering out shows with 0 recorded songs.
+ * Automatically traverses to Page 2 if Page 1 has fewer than 5 completed shows
+ * (e.g. for actively touring artists with upcoming future tour dates/empty entries).
  */
 export async function getArtistShows(
   mbid: string,
   page = 1
 ): Promise<NormalizedShow[]> {
-  const data = await fetchSetlistFm<RawSetlistsResponse>(
+  const page1Data = await fetchSetlistFm<RawSetlistsResponse>(
     `/artist/${encodeURIComponent(mbid)}/setlists?p=${page}`
   );
 
-  if (!data || !data.setlist) {
+  if (!page1Data || !page1Data.setlist) {
     return [];
   }
 
-  const setlists: RawSetlist[] = Array.isArray(data.setlist)
-    ? data.setlist
-    : [data.setlist];
+  const allRawSetlists: RawSetlist[] = Array.isArray(page1Data.setlist)
+    ? [...page1Data.setlist]
+    : [page1Data.setlist];
 
-  return setlists
+  // Count playable shows in page 1
+  const page1PlayableCount = allRawSetlists.filter(
+    (s) => countSongsInSetlist(s) > 0
+  ).length;
+
+  // If page 1 has fewer than 5 completed shows with songs, automatically fetch page 2
+  if (page === 1 && page1PlayableCount < 5 && page1Data.total && page1Data.total > 20) {
+    try {
+      const page2Data = await fetchSetlistFm<RawSetlistsResponse>(
+        `/artist/${encodeURIComponent(mbid)}/setlists?p=2`
+      );
+      if (page2Data?.setlist) {
+        const page2Setlists = Array.isArray(page2Data.setlist)
+          ? page2Data.setlist
+          : [page2Data.setlist];
+        allRawSetlists.push(...page2Setlists);
+      }
+    } catch (err) {
+      console.warn("Failed to fetch page 2 setlists for artist:", err);
+    }
+  }
+
+  // Filter only shows that actually have recorded songs (songCount > 0)
+  const normalizedShows: NormalizedShow[] = allRawSetlists
     .map((s) => {
       const songCount = countSongsInSetlist(s);
       return {
@@ -140,6 +252,14 @@ export async function getArtistShows(
       };
     })
     .filter((show) => show.songCount > 0);
+
+  // Sort by event date descending so the most recent completed shows appear first
+  normalizedShows.sort(
+    (a, b) => parseEventDate(b.eventDate) - parseEventDate(a.eventDate)
+  );
+
+  // Return up to 20 completed, playable shows
+  return normalizedShows.slice(0, 20);
 }
 
 /**
@@ -154,51 +274,56 @@ export async function getRawSetlist(
 }
 
 /**
- * Fetch recent completed shows with songs for consensus analysis
+ * Fetch recent completed shows with songs for consensus analysis.
+ * Traverses past empty upcoming tour stops across up to 3 pages to collect
+ * the 5 most recent completed concerts that actually have recorded setlists.
  */
 export async function getRecentRawSetlists(
   mbid: string,
   maxShows = 5
 ): Promise<RawSetlist[]> {
-  const data = await fetchSetlistFm<RawSetlistsResponse>(
-    `/artist/${encodeURIComponent(mbid)}/setlists?p=1`
-  );
+  const collectedShows: RawSetlist[] = [];
+  const MAX_PAGES = 3;
 
-  if (!data || !data.setlist) {
-    return [];
-  }
-
-  const setlists: RawSetlist[] = Array.isArray(data.setlist)
-    ? data.setlist
-    : [data.setlist];
-
-  const showsWithSongs = setlists.filter(
-    (s) => countSongsInSetlist(s) > 0
-  );
-
-  // If page 1 had fewer than maxShows, fetch page 2 to ensure sufficient sample
-  if (showsWithSongs.length < maxShows) {
+  for (let page = 1; page <= MAX_PAGES; page++) {
     try {
-      const page2 = await fetchSetlistFm<RawSetlistsResponse>(
-        `/artist/${encodeURIComponent(mbid)}/setlists?p=2`
+      const data = await fetchSetlistFm<RawSetlistsResponse>(
+        `/artist/${encodeURIComponent(mbid)}/setlists?p=${page}`
       );
-      if (page2?.setlist) {
-        const page2Setlists = Array.isArray(page2.setlist)
-          ? page2.setlist
-          : [page2.setlist];
-        for (const s of page2Setlists) {
-          if (countSongsInSetlist(s) > 0) {
-            showsWithSongs.push(s);
-            if (showsWithSongs.length >= maxShows) break;
-          }
+
+      if (!data || !data.setlist) {
+        break;
+      }
+
+      const setlists: RawSetlist[] = Array.isArray(data.setlist)
+        ? data.setlist
+        : [data.setlist];
+
+      for (const s of setlists) {
+        if (countSongsInSetlist(s) > 0) {
+          collectedShows.push(s);
         }
       }
-    } catch {
-      // Ignore page 2 failure if page 1 provided enough context
+
+      if (collectedShows.length >= maxShows) {
+        break;
+      }
+
+      if (data.total && data.total <= page * 20) {
+        break;
+      }
+    } catch (err) {
+      console.warn(`Error fetching setlists page ${page} for artist ${mbid}:`, err);
+      break;
     }
   }
 
-  return showsWithSongs.slice(0, maxShows);
+  // Sort by event date descending
+  collectedShows.sort(
+    (a, b) => parseEventDate(b.eventDate) - parseEventDate(a.eventDate)
+  );
+
+  return collectedShows.slice(0, maxShows);
 }
 
 /**
@@ -210,13 +335,13 @@ export async function getRecentRawSetlists(
  */
 export function parseMemorySetlist(rawSetlist: RawSetlist): SetlistParseResult {
   const tracks: NormalizedTrack[] = [];
-  const rawSets = rawSetlist.sets?.set || [];
+  const rawSets = extractRawSets(rawSetlist);
 
   let currentSetNumber = 1;
 
   for (const set of rawSets) {
     const isEncore = Boolean(set.encore);
-    const songs = set.song || [];
+    const songs = extractRawSongs(set.song);
 
     for (const song of songs) {
       // Prune background audio / tape playback
@@ -307,12 +432,12 @@ export function calculateRehearsalConsensus(
 
   // 1. Process each eligible show
   eligibleShows.forEach((show, showIndex) => {
-    const rawSets = show.sets?.set || [];
+    const rawSets = extractRawSets(show);
     let positionInShow = 1;
 
     for (const set of rawSets) {
       const isEncore = Boolean(set.encore);
-      const songs = set.song || [];
+      const songs = extractRawSongs(set.song);
 
       for (const song of songs) {
         if (song.tape) continue;

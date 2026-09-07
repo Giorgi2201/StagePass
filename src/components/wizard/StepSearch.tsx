@@ -6,14 +6,14 @@ import type { NormalizedArtist } from "@/types/setlist";
 import { Search, X, Music, Disc3, Mic2, Sparkles, History } from "lucide-react";
 import { lightTap } from "@/lib/haptics";
 
-// Popular artists for quick zero-state discovery
+// Popular artists for quick zero-state discovery with verified MusicBrainz UUIDs
 const SUGGESTED_ARTISTS: NormalizedArtist[] = [
-  { id: "cc197006-ce52-4796-98a2-1bc4502892d2", name: "Coldplay", disambiguation: "British rock band" },
+  { id: "381086ea-f511-4aba-bdf9-71c753dc5077", name: "Kendrick Lamar", disambiguation: "American rapper & songwriter" },
+  { id: "20244d07-534f-4eff-b4d4-930878889970", name: "Taylor Swift", disambiguation: "American pop / country artist" },
+  { id: "cc197bad-dc9c-440d-a5b5-d52ba2e14234", name: "Coldplay", disambiguation: "British rock band" },
   { id: "a74b1b7f-71a5-4011-9441-d0b5e4122711", name: "Radiohead", disambiguation: "English alternative rock band" },
   { id: "b10bbbfc-cf9e-42e0-be17-e2c3e1d2600d", name: "The Beatles", disambiguation: "legendary rock band" },
-  { id: "20244d07-534f-4eff-b4d4-930878889970", name: "Taylor Swift", disambiguation: "American pop / country artist" },
-  { id: "d8354b30-e516-4459-8674-477de52932e8", name: "Kendrick Lamar", disambiguation: "American rapper & songwriter" },
-  { id: "67f66c07-6334-4a47-a8a2-a7209772bf62", name: "Foo Fighters", disambiguation: "American rock band" },
+  { id: "67f66c07-6e61-4026-ade5-7e782fad3a5d", name: "Foo Fighters", disambiguation: "American rock band" },
 ];
 
 export function StepSearch() {
