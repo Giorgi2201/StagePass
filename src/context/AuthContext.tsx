@@ -28,16 +28,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const fetchSession = useCallback(async () => {
     try {
       const response = await fetch("/api/auth/me", { cache: "no-store" });
-      if (response.ok) {
-        const data = await response.json();
-        setIsAuthenticated(data.isAuthenticated);
-        setUser(data.user || null);
-      } else {
+      if (!response.ok) {
+        console.warn(
+          `[AuthContext] /api/auth/me returned non-OK status: ${response.status}`
+        );
         setIsAuthenticated(false);
         setUser(null);
+        return;
       }
+
+      const data = await response.json();
+      setIsAuthenticated(Boolean(data?.isAuthenticated));
+      setUser(data?.user || null);
     } catch (error) {
-      console.error("Failed to check authentication status:", error);
+      console.warn(
+        "[AuthContext] Error checking session status from /api/auth/me:",
+        error
+      );
       setIsAuthenticated(false);
       setUser(null);
     } finally {
@@ -46,39 +53,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    let ignore = false;
-
-    async function load() {
-      try {
-        const response = await fetch("/api/auth/me", { cache: "no-store" });
-        if (ignore) return;
-        if (response.ok) {
-          const data = await response.json();
-          setIsAuthenticated(data.isAuthenticated);
-          setUser(data.user || null);
-        } else {
-          setIsAuthenticated(false);
-          setUser(null);
-        }
-      } catch (error) {
-        console.error("Failed to check authentication status:", error);
-        if (!ignore) {
-          setIsAuthenticated(false);
-          setUser(null);
-        }
-      } finally {
-        if (!ignore) {
-          setIsLoading(false);
-        }
-      }
-    }
-
-    void load();
-
-    return () => {
-      ignore = true;
-    };
-  }, []);
+    void fetchSession();
+  }, [fetchSession]);
 
   const login = useCallback(() => {
     window.location.replace(new URL("/api/auth/login", window.location.href).href);
@@ -91,7 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null);
       setIsAuthenticated(false);
     } catch (error) {
-      console.error("Failed to logout:", error);
+      console.error("[AuthContext] Failed to logout:", error);
     } finally {
       setIsLoading(false);
     }
