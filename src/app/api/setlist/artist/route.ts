@@ -13,7 +13,11 @@ export async function GET(request: Request) {
   }
 
   try {
-    const artists = await searchArtists(q);
+    const limitParam = searchParams.get("limit");
+    const limit = limitParam
+      ? Math.min(Math.max(parseInt(limitParam, 10) || 6, 1), 8)
+      : 6;
+    const artists = await searchArtists(q, limit);
     return NextResponse.json(artists, {
       status: 200,
       headers: {

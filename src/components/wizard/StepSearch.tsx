@@ -173,14 +173,14 @@ export function StepSearch() {
 
         {/* Loading Skeletons */}
         {isSearching && results.length === 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 min-[480px]:grid-cols-2 lg:grid-cols-3 gap-3">
             {[1, 2, 3, 4, 5, 6].map((n) => (
               <div
                 key={n}
-                className="h-16 rounded-md bg-[#181818] border border-neutral-800/80 p-2 flex items-center gap-3 animate-pulse"
+                className="h-18 rounded-lg bg-[#181818] border border-neutral-800/80 p-3 flex items-center gap-3 animate-pulse"
               >
                 <div className="w-12 h-12 rounded-full bg-[#282828] shrink-0" />
-                <div className="space-y-1.5 flex-1">
+                <div className="space-y-1.5 flex-1 min-w-0">
                   <div className="h-4 w-3/4 bg-[#282828] rounded" />
                   <div className="h-3 w-1/2 bg-[#282828]/60 rounded" />
                 </div>
@@ -191,48 +191,78 @@ export function StepSearch() {
 
         {/* Empty Search State */}
         {!isSearching && hasQuery && results.length === 0 && (
-          <div className="p-8 rounded-xl bg-[#181818] border border-neutral-800 text-center space-y-2">
-            <Music className="w-8 h-8 mx-auto text-zinc-600" />
-            <div className="font-semibold text-white">No artists found</div>
-            <p className="text-xs text-[#B3B3B3]">
-              No exact match for &quot;{artistQuery}&quot; on Setlist.fm. Check spelling or try searching another name.
-            </p>
+          <div className="p-8 sm:p-10 rounded-xl bg-[#181818] border border-neutral-800/80 text-center space-y-3">
+            <div className="w-12 h-12 rounded-full bg-neutral-900 border border-neutral-800 flex items-center justify-center mx-auto text-zinc-500">
+              <Music className="w-6 h-6" />
+            </div>
+            <div className="space-y-1">
+              <div className="font-semibold text-white text-base">No primary artists found</div>
+              <p className="text-xs sm:text-sm text-[#B3B3B3] max-w-md mx-auto leading-relaxed">
+                No solo or headlining match found for &quot;{artistQuery}&quot; on Setlist.fm. Collaborative guest appearances were filtered out. Check the spelling or search another artist name.
+              </p>
+            </div>
           </div>
         )}
 
         {/* Artists Display Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {displayedArtists.map((artist) => (
-            <button
-              key={artist.id}
-              type="button"
-              onClick={() => {
-                lightTap();
-                selectArtist(artist);
-              }}
-              className="group relative flex items-center gap-3.5 p-2.5 rounded-md bg-[#242424] hover:bg-[#303030] active:scale-[0.98] transition-all text-left border border-transparent hover:border-neutral-700/60 shadow-md cursor-pointer"
-            >
-              {/* Circular Avatar Icon */}
-              <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-neutral-800 via-neutral-700 to-neutral-800 group-hover:from-purple-900 group-hover:to-pink-900 flex items-center justify-center shrink-0 shadow transition-colors">
-                <Mic2 className="w-5 h-5 text-zinc-300 group-hover:text-white transition-colors" />
-              </div>
+        <div className="grid grid-cols-1 min-[480px]:grid-cols-2 lg:grid-cols-3 gap-3">
+          {displayedArtists.map((artist) => {
+            const isAlias =
+              Boolean(artist.disambiguation) &&
+              (artist.disambiguation!.toLowerCase().includes("formerly") ||
+                artist.disambiguation!.toLowerCase().includes("aka") ||
+                (hasQuery &&
+                  artist.disambiguation!
+                    .toLowerCase()
+                    .includes(artistQuery.toLowerCase().trim())));
 
-              {/* Text Meta */}
-              <div className="flex-1 min-w-0 pr-2">
-                <div className="font-bold text-sm text-white truncate group-hover:text-[#1DB954] transition-colors">
-                  {artist.name}
+            return (
+              <button
+                key={artist.id}
+                type="button"
+                onClick={() => {
+                  lightTap();
+                  selectArtist(artist);
+                }}
+                className="group relative flex items-center gap-3.5 p-3 rounded-lg bg-[#181818] hover:bg-[#242424] active:scale-[0.98] transition-all text-left border border-neutral-800/80 hover:border-[#1DB954]/50 shadow-md cursor-pointer"
+              >
+                {/* Circular Avatar Icon */}
+                <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-neutral-800 via-neutral-700 to-neutral-800 group-hover:from-purple-900 group-hover:to-pink-900 flex items-center justify-center shrink-0 shadow transition-colors">
+                  <Mic2 className="w-5 h-5 text-zinc-300 group-hover:text-white transition-colors" />
                 </div>
-                <div className="text-[11px] text-[#B3B3B3] truncate leading-tight mt-0.5">
-                  {artist.disambiguation || "Artist on tour"}
-                </div>
-              </div>
 
-              {/* Action Indicator */}
-              <div className="opacity-0 group-hover:opacity-100 transition-opacity pr-1 text-[#1DB954]">
-                <Disc3 className="w-4 h-4 animate-spin-slow" />
-              </div>
-            </button>
-          ))}
+                {/* Text Meta */}
+                <div className="flex-1 min-w-0 pr-2">
+                  <div className="font-bold text-sm text-white truncate group-hover:text-[#1DB954] transition-colors">
+                    {artist.name}
+                  </div>
+                  {artist.disambiguation ? (
+                    <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                      <span
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] max-w-full truncate ${
+                          isAlias
+                            ? "bg-[#1DB954]/20 text-[#1ed760] border border-[#1DB954]/40 font-semibold"
+                            : "bg-neutral-800/90 text-zinc-300 border border-neutral-700/60 font-medium"
+                        }`}
+                        title={artist.disambiguation}
+                      >
+                        <span className="truncate">{artist.disambiguation}</span>
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="text-[11px] text-zinc-400 truncate mt-1">
+                      Artist on tour
+                    </div>
+                  )}
+                </div>
+
+                {/* Action Indicator */}
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity pr-1 text-[#1DB954]">
+                  <Disc3 className="w-4 h-4 animate-spin-slow" />
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>

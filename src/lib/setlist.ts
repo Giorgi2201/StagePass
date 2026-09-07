@@ -59,10 +59,125 @@ async function fetchSetlistFm<T>(endpoint: string): Promise<T | null> {
   return (await response.json()) as T;
 }
 
+const FEATURE_MARKERS = /\b(feat\.?|ft\.?|featuring|with|vs\.?)\b/i;
+const COLLAB_SEPARATORS =
+  /\b(feat\.?|ft\.?|featuring|with|vs\.?|and)\b|[,&+/\u00d7]|(\s+[xX]\s+)/i;
+const TRIBUTE_REGEX =
+  /\b(tribute|impersonator|cover\s*band|cover\s*brasil|experience|bootleg|orchestra|ensemble)\b/i;
+
+export interface ArtistRelevanceScore {
+  tier: 1 | 2 | 3 | 4 | 5;
+  score: number;
+  reason: string;
+}
+
 /**
- * Search artists by name with exact matches prioritized
+ * Multi-Tiered Relevance Scoring Algorithm for Setlist.fm Artists:
+ * - Tier 1: Exact Name / Direct Alias in Disambiguation (e.g. "Ye" formerly Kanye West)
+ * - Tier 2: Primary Solo / Band Match (starts with/contains query, no collaborative keywords)
+ * - Tier 3: Established Side Projects & Duos (e.g. "¥$", "Silk Sonic", "The Postal Service")
+ * - Tier 4: Collaborative Noise & One-off Guest Features ("Lil Wayne feat. Kanye West")
+ * - Tier 5: Tribute & Cover Bands (demoted below all original cataloged artists)
  */
-export async function searchArtists(query: string): Promise<NormalizedArtist[]> {
+export function scoreArtistRelevance(
+  name: string,
+  disambiguation: string | undefined,
+  query: string
+): ArtistRelevanceScore {
+  const lowerQuery = query.toLowerCase().trim();
+  const lowerName = (name || "").toLowerCase().trim();
+  const lowerDisambiguation = (disambiguation || "").toLowerCase().trim();
+
+  const queryHasFeature = FEATURE_MARKERS.test(lowerQuery);
+  const queryHasCollab = COLLAB_SEPARATORS.test(lowerQuery);
+
+  const isTribute =
+    TRIBUTE_REGEX.test(lowerName) || TRIBUTE_REGEX.test(lowerDisambiguation);
+  const nameHasFeature = FEATURE_MARKERS.test(lowerName);
+  const nameHasCollab = COLLAB_SEPARATORS.test(lowerName);
+
+  // 1. Tier 1: Exact / Alias Match
+  if (lowerName === lowerQuery) {
+    return { tier: 1, score: 100, reason: "exact_name" };
+  }
+
+  if (lowerName === `the ${lowerQuery}` || `the ${lowerName}` === lowerQuery) {
+    return { tier: 1, score: 98, reason: "exact_the_prefix" };
+  }
+
+  // Direct alias in disambiguation (e.g. "Ye" -> "formerly Kanye West")
+  const isDirectAlias =
+    !isTribute &&
+    !nameHasCollab &&
+    (lowerDisambiguation === lowerQuery ||
+      lowerDisambiguation === `formerly ${lowerQuery}` ||
+      lowerDisambiguation.includes(`formerly ${lowerQuery}`) ||
+      lowerDisambiguation.includes(`formerly known as ${lowerQuery}`) ||
+      lowerDisambiguation.includes(`aka ${lowerQuery}`) ||
+      lowerDisambiguation.includes(`a.k.a. ${lowerQuery}`) ||
+      lowerDisambiguation.startsWith(`formerly ${lowerQuery}`) ||
+      lowerDisambiguation.startsWith(`aka ${lowerQuery}`));
+
+  if (isDirectAlias) {
+    return { tier: 1, score: 95, reason: "alias_disambiguation" };
+  }
+
+  // Demote tribute bands below all original recordings
+  if (isTribute) {
+    return { tier: 5, score: 10, reason: "tribute_band" };
+  }
+
+  // Tier 3: Established Side Projects / Duos with distinct project name
+  // e.g. "¥$" (disambiguation: "Ye & Ty Dolla $ign"), "The Postal Service", "Silk Sonic"
+  // where artist name has no collab separators, but disambiguation connects to query
+  if (
+    !nameHasCollab &&
+    (lowerDisambiguation.includes(lowerQuery) ||
+      (lowerQuery.includes("kanye") && lowerDisambiguation.includes("ye")) ||
+      (lowerQuery.includes("ye") && lowerDisambiguation.includes("kanye")))
+  ) {
+    return { tier: 3, score: 65, reason: "established_side_project" };
+  }
+
+  // Tier 4: Guest / Feature Noise (e.g. "Lil Wayne feat. Kanye West")
+  if (!queryHasFeature && nameHasFeature) {
+    return { tier: 4, score: 15, reason: "guest_feature" };
+  }
+
+  // Tier 4: Collaborative noise (with, vs, &, commas) when query does not request collaboration
+  if (!queryHasCollab && nameHasCollab) {
+    return { tier: 4, score: 20, reason: "collaborative_noise" };
+  }
+
+  // Tier 2: Primary Solo / Band Match (clean standalone artist)
+  if (!nameHasCollab) {
+    if (lowerName.startsWith(lowerQuery)) {
+      return { tier: 2, score: 85, reason: "clean_starts_with" };
+    }
+    if (lowerName.includes(lowerQuery)) {
+      return { tier: 2, score: 75, reason: "clean_contains" };
+    }
+  }
+
+  // If query DID have collab keywords and name matches
+  if (
+    queryHasCollab &&
+    (lowerName.includes(lowerQuery) || lowerDisambiguation.includes(lowerQuery))
+  ) {
+    return { tier: 3, score: 60, reason: "requested_collaboration" };
+  }
+
+  return { tier: 4, score: 15, reason: "fallback_low_relevance" };
+}
+
+/**
+ * Search artists by name with multi-tiered relevance scoring & collaborative noise filtering.
+ * Returns top 6 (up to 8) highest-relevance artists, prioritizing primary solo profiles.
+ */
+export async function searchArtists(
+  query: string,
+  maxResults = 6
+): Promise<NormalizedArtist[]> {
   const trimmed = query.trim();
   if (!trimmed) return [];
 
@@ -78,22 +193,28 @@ export async function searchArtists(query: string): Promise<NormalizedArtist[]> 
     ? data.artist
     : [data.artist];
 
-  const lowerQuery = trimmed.toLowerCase();
+  const cappedMax = Math.min(Math.max(maxResults, 1), 8);
 
-  // Map and sort so exact artist name matches appear first
-  const normalized: NormalizedArtist[] = artists.map((a) => ({
-    id: a.mbid,
-    name: a.name,
-    disambiguation: a.disambiguation,
+  const scored = artists.map((a) => ({
+    artist: {
+      id: a.mbid,
+      name: a.name,
+      disambiguation: a.disambiguation,
+    },
+    ...scoreArtistRelevance(a.name, a.disambiguation, trimmed),
   }));
 
-  return normalized.sort((a, b) => {
-    const aExact = a.name.toLowerCase() === lowerQuery;
-    const bExact = b.name.toLowerCase() === lowerQuery;
-    if (aExact && !bExact) return -1;
-    if (!aExact && bExact) return 1;
-    return 0;
-  });
+  // Sort descending by score
+  scored.sort((a, b) => b.score - a.score);
+
+  // Filter out Tier 4 (guest noise) and Tier 5 (tributes) if we have primary candidates (Tier 1-3)
+  const primaryResults = scored.filter((item) => item.tier <= 3);
+  const finalCandidates =
+    primaryResults.length > 0
+      ? primaryResults
+      : scored.filter((item) => item.tier <= 4);
+
+  return finalCandidates.slice(0, cappedMax).map((item) => item.artist);
 }
 
 /**
