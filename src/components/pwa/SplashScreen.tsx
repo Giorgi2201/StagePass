@@ -1,25 +1,18 @@
 "use client";
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import { useAuth } from "@/context/AuthContext";
+import React, { useEffect, useRef, useState } from "react";
 import { Ticket } from "lucide-react";
 
-const MIN_DISPLAY_MS = 600; // Minimum time to prevent visual flashing
-const HARD_SAFETY_TIMEOUT_MS = 2000; // Absolute maximum fallback (2s max)
-const EXIT_DURATION_MS = 700; // Fade-out and zoom animation duration
-const STORAGE_KEY = "stagepass_splash_seen";
+const ENTRANCE_DURATION_MS = 800; // Display for 800ms
+const TOTAL_LIFETIME_MS = 1300; // 800ms display + 500ms fade transition
+const STORAGE_KEY = "stagepass_splash_shown";
 
 export function SplashScreen() {
-  const { isLoading } = useAuth();
   const [isVisible, setIsVisible] = useState(() => {
     if (typeof window === "undefined") return true;
     try {
-      const navEntry = window.performance?.getEntriesByType(
-        "navigation"
-      )[0] as PerformanceNavigationTiming | undefined;
-      const isReload = navEntry?.type === "reload";
-      const alreadySeen = sessionStorage.getItem(STORAGE_KEY);
-      if (alreadySeen && !isReload) {
+      const alreadyShown = sessionStorage.getItem(STORAGE_KEY);
+      if (alreadyShown) {
         return false;
       }
       sessionStorage.setItem(STORAGE_KEY, "true");
@@ -30,100 +23,29 @@ export function SplashScreen() {
   });
 
   const [isExiting, setIsExiting] = useState(false);
+  const timerStartedRef = useRef(false);
 
-  // Reference trackers to safeguard against React 19/StrictMode double-invocations
-  const hasDismissedRef = useRef(false);
-  const minDisplayElapsedRef = useRef(false);
-  const mountTimeRef = useRef<number>(Date.now());
-
-  const hardSafetyTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const minTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const exitTimerRef = useRef<NodeJS.Timeout | null>(null);
-
-  /**
-   * Resilient exit sequence: triggers smooth CSS transition
-   * and unmounts from DOM after EXIT_DURATION_MS.
-   */
-  const triggerExit = useCallback(() => {
-    if (hasDismissedRef.current) return;
-    hasDismissedRef.current = true;
-
-    // Clear all pending timers to avoid duplicate triggers
-    if (hardSafetyTimerRef.current) {
-      clearTimeout(hardSafetyTimerRef.current);
-      hardSafetyTimerRef.current = null;
-    }
-    if (minTimerRef.current) {
-      clearTimeout(minTimerRef.current);
-      minTimerRef.current = null;
-    }
-
-    // Trigger smooth exit transition
-    setIsExiting(true);
-
-    // Unmount completely from React DOM once exit transition finishes
-    exitTimerRef.current = setTimeout(() => {
-      setIsVisible(false);
-    }, EXIT_DURATION_MS);
-  }, []);
-
-  // 1. Hard Safety Timeout & Minimum Display Timer on Mount
   useEffect(() => {
     if (!isVisible) return;
+    if (timerStartedRef.current) return;
+    timerStartedRef.current = true;
 
-    // Hard Safety Fallback: after 2000ms, immediately force dismissal regardless of any state
-    hardSafetyTimerRef.current = setTimeout(() => {
-      triggerExit();
-    }, HARD_SAFETY_TIMEOUT_MS);
+    // At 800ms: trigger exit transition (500ms duration)
+    const exitTimer = setTimeout(() => {
+      setIsExiting(true);
+    }, ENTRANCE_DURATION_MS);
 
-    // Minimum Display Timer: mark min display elapsed after 600ms
-    minTimerRef.current = setTimeout(() => {
-      minDisplayElapsedRef.current = true;
-      // If auth finished while we were waiting for the minimum duration
-      if (!isLoading) {
-        triggerExit();
-      }
-    }, MIN_DISPLAY_MS);
+    // At 1300ms: unmount completely from DOM
+    const unmountTimer = setTimeout(() => {
+      setIsVisible(false);
+    }, TOTAL_LIFETIME_MS);
 
     return () => {
-      // In React StrictMode development cleanup, clear pending timers if exit hasn't started
-      if (!hasDismissedRef.current) {
-        if (hardSafetyTimerRef.current) {
-          clearTimeout(hardSafetyTimerRef.current);
-        }
-        if (minTimerRef.current) {
-          clearTimeout(minTimerRef.current);
-        }
-      }
+      clearTimeout(exitTimer);
+      clearTimeout(unmountTimer);
+      timerStartedRef.current = false;
     };
-  }, [isVisible, triggerExit]);
-
-  // 2. Reactivity to Auth State (isLoading becoming false)
-  useEffect(() => {
-    if (!isVisible || hasDismissedRef.current) return;
-
-    if (!isLoading) {
-      const elapsed = Date.now() - mountTimeRef.current;
-      if (elapsed >= MIN_DISPLAY_MS || minDisplayElapsedRef.current) {
-        triggerExit();
-      } else {
-        const remaining = Math.max(0, MIN_DISPLAY_MS - elapsed);
-        const timer = setTimeout(() => {
-          triggerExit();
-        }, remaining);
-        return () => clearTimeout(timer);
-      }
-    }
-  }, [isLoading, isVisible, triggerExit]);
-
-  // Cleanup exit transition timer on unmount
-  useEffect(() => {
-    return () => {
-      if (exitTimerRef.current) {
-        clearTimeout(exitTimerRef.current);
-      }
-    };
-  }, []);
+  }, [isVisible]);
 
   if (!isVisible) {
     return null;
@@ -131,10 +53,10 @@ export function SplashScreen() {
 
   return (
     <div
-      className={`fixed inset-0 z-[9999] bg-[#121212] flex flex-col items-center justify-center select-none overflow-hidden transition-all duration-700 ease-out ${
+      className={`fixed inset-0 z-[9999] bg-[#121212] flex flex-col items-center justify-center select-none overflow-hidden transition-opacity duration-500 ease-out ${
         isExiting
-          ? "opacity-0 scale-105 pointer-events-none"
-          : "opacity-100 scale-100 pointer-events-auto"
+          ? "opacity-0 pointer-events-none"
+          : "opacity-100 pointer-events-auto"
       }`}
       aria-hidden={isExiting}
       role="dialog"

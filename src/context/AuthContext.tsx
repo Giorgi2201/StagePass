@@ -25,7 +25,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  const fetchSession = useCallback(async () => {
+  const checkAuth = useCallback(async () => {
     try {
       const response = await fetch("/api/auth/me", { cache: "no-store" });
       if (!response.ok) {
@@ -38,8 +38,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       const data = await response.json();
-      setIsAuthenticated(Boolean(data?.isAuthenticated));
-      setUser(data?.user || null);
+      if (data?.isAuthenticated && data?.user) {
+        setIsAuthenticated(true);
+        setUser(data.user);
+      } else {
+        setIsAuthenticated(false);
+        setUser(null);
+      }
     } catch (error) {
       console.warn(
         "[AuthContext] Error checking session status from /api/auth/me:",
@@ -53,8 +58,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    void fetchSession();
-  }, [fetchSession]);
+    void checkAuth();
+  }, [checkAuth]);
 
   const login = useCallback(() => {
     window.location.replace(new URL("/api/auth/login", window.location.href).href);
@@ -81,7 +86,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isLoading,
         login,
         logout,
-        refreshSession: fetchSession,
+        refreshSession: checkAuth,
       }}
     >
       {children}

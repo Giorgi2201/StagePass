@@ -22,13 +22,13 @@ export default function Home() {
 
   return (
     <div className="flex-1 flex flex-col relative bg-gradient-to-b from-[#181818] via-[#121212] to-[#121212]">
-      {/* Loading Skeleton */}
+      {/* Inline Document Skeleton (Normal Layout Flow - No Full Screen Overlay) */}
       {isLoading ? (
-        <main className="w-full max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8 flex-1 flex flex-col justify-center relative z-10">
-          <div className="w-full rounded-2xl bg-[#181818] border border-[#282828] p-6 sm:p-8 animate-pulse space-y-4">
-            <div className="h-6 w-36 bg-[#282828] rounded-full" />
-            <div className="h-10 w-2/3 bg-[#282828] rounded-lg" />
-            <div className="h-4 w-1/2 bg-[#282828] rounded" />
+        <main className="w-full max-w-5xl mx-auto px-3 sm:px-6 py-4 sm:py-8 flex-1 flex flex-col relative z-10">
+          <div className="p-6 sm:p-8 rounded-2xl bg-[#181818] border border-[#282828] animate-pulse space-y-4">
+            <div className="h-6 w-36 bg-[#242424] rounded-full" />
+            <div className="h-10 w-2/3 bg-[#242424] rounded-lg" />
+            <div className="h-4 w-1/2 bg-[#242424] rounded" />
           </div>
         </main>
       ) : isAuthenticated && user ? (
