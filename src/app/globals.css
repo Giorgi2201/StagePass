@@ -68,3 +68,45 @@ textarea {
 .h-safe-screen {
   height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
 }
+
+/* GPU-Accelerated Audio Equalizer Animations for Splash Screen */
+@keyframes eqPulse1 {
+  0%, 100% { transform: scaleY(0.25); opacity: 0.4; }
+  50% { transform: scaleY(1); opacity: 1; }
+}
+
+@keyframes eqPulse2 {
+  0%, 100% { transform: scaleY(0.4); opacity: 0.5; }
+  50% { transform: scaleY(0.95); opacity: 1; }
+}
+
+@keyframes eqPulse3 {
+  0%, 100% { transform: scaleY(0.2); opacity: 0.35; }
+  50% { transform: scaleY(1); opacity: 1; }
+}
+
+@keyframes eqPulse4 {
+  0%, 100% { transform: scaleY(0.35); opacity: 0.5; }
+  50% { transform: scaleY(0.85); opacity: 1; }
+}
+
+.animate-eq-1 {
+  animation: eqPulse1 0.9s ease-in-out infinite alternate;
+  transform-origin: bottom;
+}
+
+.animate-eq-2 {
+  animation: eqPulse2 0.75s ease-in-out infinite alternate 0.15s;
+  transform-origin: bottom;
+}
+
+.animate-eq-3 {
+  animation: eqPulse3 0.85s ease-in-out infinite alternate 0.3s;
+  transform-origin: bottom;
+}
+
+.animate-eq-4 {
+  animation: eqPulse4 0.8s ease-in-out infinite alternate 0.1s;
+  transform-origin: bottom;
+}
+

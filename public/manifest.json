@@ -4,8 +4,8 @@
   "description": "Transform concert setlists into Spotify playlists and digital ticket stubs.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0a0a0a",
-  "theme_color": "#0a0a0a",
+  "background_color": "#121212",
+  "theme_color": "#121212",
   "orientation": "portrait",
   "icons": [
     {

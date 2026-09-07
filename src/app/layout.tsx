@@ -5,6 +5,7 @@ import { AuthProvider } from "@/context/AuthContext";
 import { Navbar } from "@/components/Navbar";
 import { OfflineBanner } from "@/components/pwa/OfflineBanner";
 import { InstallPrompt } from "@/components/pwa/InstallPrompt";
+import { SplashScreen } from "@/components/pwa/SplashScreen";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -62,6 +63,7 @@ export default function RootLayout({
     >
       <body className="min-h-screen bg-[#121212] text-zinc-100 flex flex-col font-sans selection:bg-[#1DB954]/30 selection:text-white">
         <AuthProvider>
+          <SplashScreen />
           <OfflineBanner />
           <Navbar />
           {children}
