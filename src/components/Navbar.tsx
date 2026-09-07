@@ -6,7 +6,7 @@ import { Ticket, LogOut, Loader2 } from "lucide-react";
 import Image from "next/image";
 
 export function Navbar() {
-  const { user, isAuthenticated, isLoading, login, logout } = useAuth();
+  const { user, isAuthenticated, isLoading, logout } = useAuth();
 
   return (
     <header className="sticky top-0 z-50 w-full bg-[#121212]/90 backdrop-blur-xl border-b border-[#282828] pt-safe transition-all">
@@ -74,23 +74,7 @@ export function Navbar() {
                 <span className="hidden md:inline">Disconnect</span>
               </button>
             </div>
-          ) : (
-            /* Connect with Spotify Button */
-            <button
-              onClick={login}
-              className="group relative inline-flex items-center gap-2 px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-full bg-[#1DB954] hover:bg-[#1ed760] text-black text-xs sm:text-sm font-semibold shadow-md shadow-[#1DB954]/20 hover:shadow-lg hover:shadow-[#1DB954]/30 hover:scale-[1.02] active:scale-[0.98] transition-all"
-            >
-              {/* Official Spotify Icon SVG */}
-              <svg
-                className="w-4 h-4 fill-black shrink-0"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.498 17.306c-.216.353-.674.467-1.027.25-2.813-1.718-6.354-2.107-10.526-1.155-.403.092-.806-.16-.898-.563-.092-.403.16-.806.563-.898 4.568-1.044 8.484-.606 11.638 1.328.353.216.467.674.25 1.027zm1.467-3.262c-.272.441-.849.582-1.29.31-3.22-1.979-8.128-2.551-11.936-1.394-.497.151-1.029-.133-1.18-.63-.151-.497.133-1.029.63-1.18 4.354-1.322 9.774-.684 13.466 1.583.441.272.582.849.31 1.291zm.126-3.41c-3.861-2.293-10.223-2.504-13.889-1.391-.592.18-1.223-.155-1.403-.747-.18-.592.155-1.223.747-1.403 4.218-1.28 11.238-1.033 15.688 1.609.533.316.707 1.009.391 1.542-.316.533-1.009.707-1.542.391z" />
-              </svg>
-              <span>Connect with Spotify</span>
-            </button>
-          )}
+          ) : null}
         </div>
       </div>
     </header>

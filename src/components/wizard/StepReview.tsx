@@ -40,7 +40,7 @@ export function StepReview() {
     parseResult.tracks.length - excludedTrackIndices.size;
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300 pb-24 sm:pb-8">
+    <div className="space-y-6 animate-in fade-in duration-300 pb-28 sm:pb-8">
       {/* Top Header with Circular Spotify Back Button & Summary */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-neutral-800/80">
         <div className="flex items-center gap-3">
@@ -251,7 +251,7 @@ export function StepReview() {
       </div>
 
       {/* Floating Bottom Action Bar (Mobile Sticky / Desktop Row) */}
-      <div className="fixed sm:static bottom-0 left-0 right-0 z-40 p-4 sm:p-0 bg-[#121212]/95 sm:bg-transparent backdrop-blur-xl sm:backdrop-blur-none border-t border-neutral-800/80 sm:border-t-0 pb-safe sm:pb-0">
+      <div className="fixed sm:static bottom-0 left-0 right-0 z-40 p-4 sm:p-0 bg-[#121212]/95 sm:bg-transparent backdrop-blur-xl sm:backdrop-blur-none border-t border-neutral-800/80 sm:border-t-0 pb-[max(1rem,calc(1rem+env(safe-area-inset-bottom,0px)))] sm:pb-0 shadow-2xl sm:shadow-none">
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="hidden sm:flex items-center gap-2 text-xs text-[#B3B3B3]">
             <span>{activeTracksCount} of {parseResult.tracks.length} tracks selected</span>
