@@ -1,0 +1,240 @@
+"use client";
+
+import React, { useEffect, useState } from "react";
+import { useWizard } from "@/context/WizardContext";
+import type { NormalizedArtist } from "@/types/setlist";
+import { Search, X, Music, Disc3, Mic2, Sparkles, History } from "lucide-react";
+import { lightTap } from "@/lib/haptics";
+
+// Popular artists for quick zero-state discovery
+const SUGGESTED_ARTISTS: NormalizedArtist[] = [
+  { id: "cc197006-ce52-4796-98a2-1bc4502892d2", name: "Coldplay", disambiguation: "British rock band" },
+  { id: "a74b1b7f-71a5-4011-9441-d0b5e4122711", name: "Radiohead", disambiguation: "English alternative rock band" },
+  { id: "b10bbbfc-cf9e-42e0-be17-e2c3e1d2600d", name: "The Beatles", disambiguation: "legendary rock band" },
+  { id: "20244d07-534f-4eff-b4d4-930878889970", name: "Taylor Swift", disambiguation: "American pop / country artist" },
+  { id: "d8354b30-e516-4459-8674-477de52932e8", name: "Kendrick Lamar", disambiguation: "American rapper & songwriter" },
+  { id: "67f66c07-6334-4a47-a8a2-a7209772bf62", name: "Foo Fighters", disambiguation: "American rock band" },
+];
+
+export function StepSearch() {
+  const { mode, setMode, artistQuery, setArtistQuery, selectArtist } = useWizard();
+  const [results, setResults] = useState<NormalizedArtist[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+
+  // Debounced search (350ms)
+  useEffect(() => {
+    const trimmed = artistQuery.trim();
+    if (!trimmed) {
+      return;
+    }
+
+    let ignore = false;
+    const timer = setTimeout(async () => {
+      setIsSearching(true);
+      try {
+        const res = await fetch(`/api/setlist/artist?q=${encodeURIComponent(trimmed)}`);
+        if (!ignore) {
+          if (res.ok) {
+            const data: NormalizedArtist[] = await res.json();
+            setResults(data);
+          } else {
+            setResults([]);
+          }
+        }
+      } catch (err) {
+        if (!ignore) {
+          console.error("Failed to search artists:", err);
+          setResults([]);
+        }
+      } finally {
+        if (!ignore) {
+          setIsSearching(false);
+        }
+      }
+    }, 350);
+
+    return () => {
+      ignore = true;
+      clearTimeout(timer);
+    };
+  }, [artistQuery]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setArtistQuery(value);
+    if (!value.trim()) {
+      setResults([]);
+      setIsSearching(false);
+    }
+  };
+
+  const handleClear = () => {
+    setArtistQuery("");
+    setResults([]);
+    setIsSearching(false);
+  };
+
+  const hasQuery = Boolean(artistQuery.trim());
+  const displayedArtists = hasQuery ? results : SUGGESTED_ARTISTS;
+
+  return (
+    <div className="space-y-8 animate-in fade-in duration-300">
+      {/* Spotify-Style Mode Switcher Pills */}
+      <div className="space-y-3">
+        <div className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+          Select Experience Mode
+        </div>
+        <div className="flex flex-wrap items-center gap-2.5">
+          {/* Rehearsal Pill */}
+          <button
+            type="button"
+            onClick={() => {
+              lightTap();
+              setMode("rehearsal");
+            }}
+            className={`px-4 py-2 rounded-full text-xs sm:text-sm font-bold transition-all active:scale-[0.97] flex items-center gap-2 cursor-pointer ${
+              mode === "rehearsal"
+                ? "bg-[#1DB954] text-black shadow-lg shadow-[#1DB954]/25"
+                : "bg-[#282828] hover:bg-[#333333] text-white"
+            }`}
+          >
+            <Sparkles className={`w-3.5 h-3.5 ${mode === "rehearsal" ? "text-black" : "text-purple-400"}`} />
+            <span>Pre-Concert Rehearsal</span>
+          </button>
+
+          {/* Memory Pill */}
+          <button
+            type="button"
+            onClick={() => {
+              lightTap();
+              setMode("memory");
+            }}
+            className={`px-4 py-2 rounded-full text-xs sm:text-sm font-bold transition-all active:scale-[0.97] flex items-center gap-2 cursor-pointer ${
+              mode === "memory"
+                ? "bg-[#1DB954] text-black shadow-lg shadow-[#1DB954]/25"
+                : "bg-[#282828] hover:bg-[#333333] text-white"
+            }`}
+          >
+            <History className={`w-3.5 h-3.5 ${mode === "memory" ? "text-black" : "text-pink-400"}`} />
+            <span>Post-Concert Memory</span>
+          </button>
+        </div>
+
+        <p className="text-xs text-[#B3B3B3] leading-relaxed">
+          {mode === "rehearsal"
+            ? "Predict the tour setlist before attending so you can study the tracks and sing along to every encore."
+            : "Relive an exact tour date you attended, preserving the exact live tracklist as a personalized playlist."}
+        </p>
+      </div>
+
+      {/* Spotify Search Bar */}
+      <div className="space-y-3">
+        <div className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
+          Find Performing Artist
+        </div>
+        <div className="relative flex items-center">
+          <div className="absolute left-4 pointer-events-none text-zinc-400">
+            <Search className="w-5 h-5" />
+          </div>
+          <input
+            type="text"
+            value={artistQuery}
+            onChange={handleInputChange}
+            placeholder="Search artists (e.g. Coldplay, Billie Eilish, Radiohead)..."
+            className="w-full h-13 pl-12 pr-12 rounded-xl bg-[#242424] hover:bg-[#2a2a2a] focus:bg-[#282828] border border-transparent focus:border-white/30 text-white placeholder:text-[#B3B3B3] text-sm sm:text-base outline-none transition-all shadow-inner"
+            autoFocus
+          />
+          {artistQuery && (
+            <button
+              type="button"
+              onClick={handleClear}
+              className="absolute right-3.5 p-1 rounded-full text-zinc-400 hover:text-white hover:bg-neutral-700/60 transition-colors cursor-pointer"
+              title="Clear search"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Search State / Results Grid */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-base sm:text-lg font-bold text-white tracking-tight">
+            {hasQuery ? "Search Results" : "Featured Artists"}
+          </h2>
+          {isSearching && (
+            <span className="text-xs text-[#1DB954] flex items-center gap-1.5 font-medium animate-pulse">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#1DB954]" />
+              Searching Setlist.fm...
+            </span>
+          )}
+        </div>
+
+        {/* Loading Skeletons */}
+        {isSearching && results.length === 0 && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {[1, 2, 3, 4, 5, 6].map((n) => (
+              <div
+                key={n}
+                className="h-16 rounded-md bg-[#181818] border border-neutral-800/80 p-2 flex items-center gap-3 animate-pulse"
+              >
+                <div className="w-12 h-12 rounded-full bg-[#282828] shrink-0" />
+                <div className="space-y-1.5 flex-1">
+                  <div className="h-4 w-3/4 bg-[#282828] rounded" />
+                  <div className="h-3 w-1/2 bg-[#282828]/60 rounded" />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Empty Search State */}
+        {!isSearching && hasQuery && results.length === 0 && (
+          <div className="p-8 rounded-xl bg-[#181818] border border-neutral-800 text-center space-y-2">
+            <Music className="w-8 h-8 mx-auto text-zinc-600" />
+            <div className="font-semibold text-white">No artists found</div>
+            <p className="text-xs text-[#B3B3B3]">
+              No exact match for &quot;{artistQuery}&quot; on Setlist.fm. Check spelling or try searching another name.
+            </p>
+          </div>
+        )}
+
+        {/* Artists Display Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {displayedArtists.map((artist) => (
+            <button
+              key={artist.id}
+              type="button"
+              onClick={() => {
+                lightTap();
+                selectArtist(artist);
+              }}
+              className="group relative flex items-center gap-3.5 p-2.5 rounded-md bg-[#242424] hover:bg-[#303030] active:scale-[0.98] transition-all text-left border border-transparent hover:border-neutral-700/60 shadow-md cursor-pointer"
+            >
+              {/* Circular Avatar Icon */}
+              <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-neutral-800 via-neutral-700 to-neutral-800 group-hover:from-purple-900 group-hover:to-pink-900 flex items-center justify-center shrink-0 shadow transition-colors">
+                <Mic2 className="w-5 h-5 text-zinc-300 group-hover:text-white transition-colors" />
+              </div>
+
+              {/* Text Meta */}
+              <div className="flex-1 min-w-0 pr-2">
+                <div className="font-bold text-sm text-white truncate group-hover:text-[#1DB954] transition-colors">
+                  {artist.name}
+                </div>
+                <div className="text-[11px] text-[#B3B3B3] truncate leading-tight mt-0.5">
+                  {artist.disambiguation || "Artist on tour"}
+                </div>
+              </div>
+
+              {/* Action Indicator */}
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity pr-1 text-[#1DB954]">
+                <Disc3 className="w-4 h-4 animate-spin-slow" />
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
