@@ -110,3 +110,25 @@ textarea {
   transform-origin: bottom;
 }
 
+/* Zero-JS Splash Screen Dismissal (Native Compositor Animation) */
+@keyframes splashDismiss {
+  0% {
+    opacity: 1;
+    visibility: visible;
+  }
+  65% {
+    opacity: 1;
+    visibility: visible;
+  }
+  100% {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+}
+
+.animate-splash-dismiss {
+  animation: splashDismiss 1.1s ease-out forwards;
+  will-change: opacity, visibility;
+}
+

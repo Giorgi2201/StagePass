@@ -17,11 +17,11 @@ export async function GET(request: Request) {
 
   if (error) {
     console.warn("Spotify OAuth authorization error:", error);
-    return NextResponse.redirect(`${baseUrl}/?error=${encodeURIComponent(error)}`);
+    return NextResponse.redirect(new URL("/", request.url));
   }
 
   if (!code || !state) {
-    return NextResponse.redirect(`${baseUrl}/?error=missing_authorization_code`);
+    return NextResponse.redirect(new URL("/", request.url));
   }
 
   // Verify CSRF state token
@@ -30,7 +30,7 @@ export async function GET(request: Request) {
 
   if (!storedState || storedState !== state) {
     console.error("State mismatch in OAuth callback");
-    return NextResponse.redirect(`${baseUrl}/?error=state_mismatch`);
+    return NextResponse.redirect(new URL("/", request.url));
   }
 
   const clientId = process.env.SPOTIFY_CLIENT_ID;
@@ -38,7 +38,7 @@ export async function GET(request: Request) {
 
   if (!clientId || !clientSecret) {
     console.error("Missing Spotify credentials in environment");
-    return NextResponse.redirect(`${baseUrl}/?error=server_configuration_error`);
+    return NextResponse.redirect(new URL("/", request.url));
   }
 
   const redirectUri = `${baseUrl}/api/auth/callback`;
@@ -63,7 +63,7 @@ export async function GET(request: Request) {
     if (!tokenResponse.ok) {
       const errorText = await tokenResponse.text();
       console.error("Spotify token exchange failed:", tokenResponse.status, errorText);
-      return NextResponse.redirect(`${baseUrl}/?error=token_exchange_failed`);
+      return NextResponse.redirect(new URL("/", request.url));
     }
 
     const tokenData = await tokenResponse.json();
@@ -81,7 +81,7 @@ export async function GET(request: Request) {
 
     if (!profileResponse.ok) {
       console.error("Failed to fetch Spotify profile:", profileResponse.status);
-      return NextResponse.redirect(`${baseUrl}/?error=profile_fetch_failed`);
+      return NextResponse.redirect(new URL("/", request.url));
     }
 
     const profileData = await profileResponse.json();
@@ -104,9 +104,9 @@ export async function GET(request: Request) {
 
     await setSessionCookie(sessionPayload);
 
-    return NextResponse.redirect(`${baseUrl}/?auth=success`);
+    return NextResponse.redirect(new URL("/", request.url));
   } catch (err) {
     console.error("Error handling Spotify callback:", err);
-    return NextResponse.redirect(`${baseUrl}/?error=internal_error`);
+    return NextResponse.redirect(new URL("/", request.url));
   }
 }

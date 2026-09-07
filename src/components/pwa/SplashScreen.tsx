@@ -1,67 +1,12 @@
-"use client";
-
-import React, { useEffect, useRef, useState } from "react";
+import React from "react";
 import { Ticket } from "lucide-react";
 
-const ENTRANCE_DURATION_MS = 800; // Display for 800ms
-const TOTAL_LIFETIME_MS = 1300; // 800ms display + 500ms fade transition
-const STORAGE_KEY = "stagepass_splash_shown";
-
 export function SplashScreen() {
-  const [isVisible, setIsVisible] = useState(() => {
-    if (typeof window === "undefined") return true;
-    try {
-      const alreadyShown = sessionStorage.getItem(STORAGE_KEY);
-      if (alreadyShown) {
-        return false;
-      }
-      sessionStorage.setItem(STORAGE_KEY, "true");
-      return true;
-    } catch {
-      return true;
-    }
-  });
-
-  const [isExiting, setIsExiting] = useState(false);
-  const timerStartedRef = useRef(false);
-
-  useEffect(() => {
-    if (!isVisible) return;
-    if (timerStartedRef.current) return;
-    timerStartedRef.current = true;
-
-    // At 800ms: trigger exit transition (500ms duration)
-    const exitTimer = setTimeout(() => {
-      setIsExiting(true);
-    }, ENTRANCE_DURATION_MS);
-
-    // At 1300ms: unmount completely from DOM
-    const unmountTimer = setTimeout(() => {
-      setIsVisible(false);
-    }, TOTAL_LIFETIME_MS);
-
-    return () => {
-      clearTimeout(exitTimer);
-      clearTimeout(unmountTimer);
-      timerStartedRef.current = false;
-    };
-  }, [isVisible]);
-
-  if (!isVisible) {
-    return null;
-  }
-
   return (
     <div
-      className={`fixed inset-0 z-[9999] bg-[#121212] flex flex-col items-center justify-center select-none overflow-hidden transition-opacity duration-500 ease-out ${
-        isExiting
-          ? "opacity-0 pointer-events-none"
-          : "opacity-100 pointer-events-auto"
-      }`}
-      aria-hidden={isExiting}
-      role="dialog"
-      aria-modal="true"
-      aria-label="Loading StagePass"
+      className="fixed inset-0 z-[9999] bg-[#121212] flex flex-col items-center justify-center select-none overflow-hidden animate-splash-dismiss"
+      aria-hidden="true"
+      role="presentation"
     >
       {/* Centered Brand Content */}
       <div className="flex flex-col items-center text-center px-6">

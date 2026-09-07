@@ -58,8 +58,53 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    void checkAuth();
-  }, [checkAuth]);
+    let ignore = false;
+
+    const runAuthCheck = async () => {
+      try {
+        const response = await fetch("/api/auth/me", { cache: "no-store" });
+        if (ignore) return;
+
+        if (!response.ok) {
+          console.warn(
+            `[AuthContext] /api/auth/me returned non-OK status: ${response.status}`
+          );
+          setIsAuthenticated(false);
+          setUser(null);
+          return;
+        }
+
+        const data = await response.json();
+        if (ignore) return;
+
+        if (data?.isAuthenticated && data?.user) {
+          setIsAuthenticated(true);
+          setUser(data.user);
+        } else {
+          setIsAuthenticated(false);
+          setUser(null);
+        }
+      } catch (error) {
+        if (ignore) return;
+        console.warn(
+          "[AuthContext] Error checking session status from /api/auth/me:",
+          error
+        );
+        setIsAuthenticated(false);
+        setUser(null);
+      } finally {
+        if (!ignore) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    runAuthCheck();
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   const login = useCallback(() => {
     window.location.replace(new URL("/api/auth/login", window.location.href).href);
