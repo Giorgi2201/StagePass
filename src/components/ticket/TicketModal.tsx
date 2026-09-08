@@ -22,6 +22,8 @@ import {
 } from "lucide-react";
 import { mediumTap, successPulse } from "@/lib/haptics";
 
+import { getDefaultTicketTheme } from "@/lib/storage";
+
 export interface TicketModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -34,6 +36,7 @@ export interface TicketModalProps {
   tracks?: NormalizedTrack[];
   playlistUrl?: string;
   mode?: "memory" | "rehearsal" | "essential";
+  initialTheme?: TicketTheme;
 }
 
 const THEMES: { id: TicketTheme; label: string; dotColor: string }[] = [
@@ -53,11 +56,19 @@ export function TicketModal({
   eventDate,
   tracks = [],
   mode,
+  initialTheme,
 }: TicketModalProps) {
-  const [theme, setTheme] = useState<TicketTheme>("spotify");
+  const [theme, setTheme] = useState<TicketTheme>(() => initialTheme || getDefaultTicketTheme());
   const [section, setSection] = useState("GA");
   const [row, setRow] = useState("1");
   const [seat, setSeat] = useState("042");
+
+  // Synchronize theme when opening with specific initialTheme
+  useEffect(() => {
+    if (isOpen) {
+      setTheme(initialTheme || getDefaultTicketTheme());
+    }
+  }, [isOpen, initialTheme]);
 
   const [isSharing, setIsSharing] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);

@@ -36,7 +36,7 @@ interface WizardContextType {
   setArtistQuery: (query: string) => void;
   selectArtist: (artist: NormalizedArtist) => void;
   selectShow: (show: NormalizedShow) => Promise<void>;
-  generateRehearsalSetlist: () => Promise<void>;
+  generateRehearsalSetlist: (artistOverride?: NormalizedArtist) => Promise<void>;
   generateEssentialHits: () => Promise<void>;
   toggleTrack: (index: number) => void;
   setPlaylistTitle: (title: string) => void;
@@ -127,45 +127,55 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
-  const generateRehearsalSetlist = useCallback(async () => {
-    if (!selectedArtist) return;
+  const generateRehearsalSetlist = useCallback(
+    async (artistOverride?: NormalizedArtist) => {
+      const targetArtist = artistOverride || selectedArtist;
+      if (!targetArtist) return;
 
-    setIsLoadingParse(true);
-    setErrorMessage(null);
-
-    try {
-      const response = await fetch(
-        `/api/setlist/parse?mode=rehearsal&mbid=${encodeURIComponent(
-          selectedArtist.id
-        )}`
-      );
-
-      if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        throw new Error(
-          errData.error || "Failed to calculate rehearsal consensus"
-        );
+      if (artistOverride) {
+        setSelectedArtist(artistOverride);
+        setModeState("rehearsal");
+        setSelectedShow(null);
       }
 
-      const data: SetlistParseResult = await response.json();
-      setParseResult(data);
-      setExcludedTrackIndices(new Set());
+      setIsLoadingParse(true);
+      setErrorMessage(null);
 
-      // Default title: e.g. "Coldplay • Tour Rehearsal Setlist"
-      const defaultTitle = `${data.artistName} • ${data.tourName || "Tour"} Rehearsal Setlist`;
-      setPlaylistTitle(defaultTitle);
-      setStep("review");
-    } catch (err) {
-      console.error("Error generating rehearsal setlist:", err);
-      setErrorMessage(
-        err instanceof Error
-          ? err.message
-          : "Failed to generate tour rehearsal setlist"
-      );
-    } finally {
-      setIsLoadingParse(false);
-    }
-  }, [selectedArtist]);
+      try {
+        const response = await fetch(
+          `/api/setlist/parse?mode=rehearsal&mbid=${encodeURIComponent(
+            targetArtist.id
+          )}`
+        );
+
+        if (!response.ok) {
+          const errData = await response.json().catch(() => ({}));
+          throw new Error(
+            errData.error || "Failed to calculate rehearsal consensus"
+          );
+        }
+
+        const data: SetlistParseResult = await response.json();
+        setParseResult(data);
+        setExcludedTrackIndices(new Set());
+
+        // Default title: e.g. "Coldplay • Tour Rehearsal Setlist"
+        const defaultTitle = `${data.artistName} • ${data.tourName || "Tour"} Rehearsal Setlist`;
+        setPlaylistTitle(defaultTitle);
+        setStep("review");
+      } catch (err) {
+        console.error("Error generating rehearsal setlist:", err);
+        setErrorMessage(
+          err instanceof Error
+            ? err.message
+            : "Failed to generate tour rehearsal setlist"
+        );
+      } finally {
+        setIsLoadingParse(false);
+      }
+    },
+    [selectedArtist]
+  );
 
   const generateEssentialHits = useCallback(async () => {
     if (!selectedArtist) return;

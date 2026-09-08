@@ -16,6 +16,7 @@ import {
   Share2,
 } from "lucide-react";
 import { successPulse } from "@/lib/haptics";
+import { saveTicketStub, getDefaultTicketTheme } from "@/lib/storage";
 
 export function StepSuccess() {
   const {
@@ -33,12 +34,40 @@ export function StepSuccess() {
   const [copiedLink, setCopiedLink] = useState(false);
   const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
 
-  // Trigger celebratory haptic sequence upon receiving playlist creation confirmation
+  // Trigger celebratory haptic sequence and auto-save stub upon receiving playlist creation confirmation
   useEffect(() => {
     if (creationResult) {
       successPulse();
+
+      try {
+        const isEssential = parseResult?.mode === "essential";
+        saveTicketStub({
+          artistName: selectedArtist?.name || parseResult?.artistName || "Concert Artist",
+          artistImageUrl: selectedArtist?.imageUrl || null,
+          tourName:
+            parseResult?.tourName ||
+            selectedShow?.tourName ||
+            (isEssential ? "Essential Hits & Fan Favorites" : "Concert Tour"),
+          venueName: isEssential
+            ? "STUDIO DISCOGRAPHY"
+            : selectedShow?.venueName || parseResult?.venueInfo || "Main Stage Arena",
+          cityName: isEssential
+            ? "GLOBAL ESSENTIALS"
+            : selectedShow?.cityName || "Global Tour",
+          eventDate: isEssential
+            ? "STUDIO 2026"
+            : selectedShow?.eventDate || "LIVE 2026",
+          mode: parseResult?.mode || "rehearsal",
+          tracks: parseResult?.tracks || [],
+          playlistUrl: creationResult.playlistUrl,
+          playlistId: creationResult.playlistId,
+          theme: getDefaultTicketTheme(),
+        });
+      } catch (err) {
+        console.error("Auto-save ticket stub failed:", err);
+      }
     }
-  }, [creationResult]);
+  }, [creationResult, parseResult, selectedArtist, selectedShow]);
 
   // Loading State with real-time dynamic contextual messages
   if (isGenerating) {

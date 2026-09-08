@@ -33,3 +33,11 @@ export function mediumTap(): void {
 export function successPulse(): void {
   vibrate([15, 50, 25]);
 }
+
+/**
+ * 8ms subtle micro-haptic tick for scrubbing/crossing tab boundaries
+ */
+export function tickHaptic(): void {
+  vibrate(8);
+}
+

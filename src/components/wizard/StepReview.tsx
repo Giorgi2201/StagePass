@@ -40,7 +40,7 @@ export function StepReview() {
     parseResult.tracks.length - excludedTrackIndices.size;
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300 pb-28 sm:pb-8">
+    <div className="space-y-6 animate-in fade-in duration-300 pb-48 md:pb-8">
       {/* Top Header with Circular Spotify Back Button & Summary */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-neutral-800/80">
         <div className="flex items-center gap-3">
@@ -299,8 +299,8 @@ export function StepReview() {
         </div>
       </div>
 
-      {/* Floating Bottom Action Bar (Mobile Sticky / Desktop Row) */}
-      <div className="fixed sm:static bottom-0 left-0 right-0 z-40 p-4 sm:p-0 bg-[#121212]/95 sm:bg-transparent backdrop-blur-xl sm:backdrop-blur-none border-t border-neutral-800/80 sm:border-t-0 pb-[max(1rem,calc(1rem+env(safe-area-inset-bottom,0px)))] sm:pb-0 shadow-2xl sm:shadow-none">
+      {/* Docked Sticky Bottom Action Bar: Stacked neatly above the mobile Liquid Glass Navbar on mobile, in-flow on desktop */}
+      <div className="fixed bottom-[calc(5.25rem+env(safe-area-inset-bottom,0px))] left-0 right-0 z-30 bg-[#121212]/90 backdrop-blur-md border-t border-white/5 py-3 px-4 shadow-[0_-8px_24px_rgba(0,0,0,0.5)] md:static md:bottom-auto md:bg-transparent md:backdrop-blur-none md:border-0 md:p-0 md:pt-4 md:shadow-none transition-all">
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="hidden sm:flex items-center gap-2 text-xs text-[#B3B3B3]">
             <span>{activeTracksCount} of {parseResult.tracks.length} tracks selected</span>

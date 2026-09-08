@@ -122,7 +122,7 @@ export function InstallPrompt() {
         <aside
           role="region"
           aria-label="App Installation Prompt"
-          className="fixed bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] left-4 right-4 sm:left-auto sm:right-6 sm:max-w-md z-40 p-4 rounded-2xl bg-neutral-950/95 border border-neutral-800 shadow-2xl backdrop-blur-xl animate-in slide-in-from-bottom-5 duration-300 pointer-events-auto"
+          className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))] left-4 right-4 sm:left-auto sm:right-6 sm:max-w-md z-50 p-4 rounded-2xl bg-neutral-950/95 border border-neutral-800 shadow-2xl backdrop-blur-xl animate-in slide-in-from-bottom-5 duration-300 pointer-events-auto"
         >
           <div className="flex items-center gap-3.5">
             {/* App Icon */}
@@ -188,7 +188,7 @@ export function InstallPrompt() {
         <aside
           role="region"
           aria-label="iOS Installation Prompt"
-          className="fixed bottom-[calc(1.2rem+env(safe-area-inset-bottom,0px))] left-4 right-4 z-40 p-3 rounded-2xl bg-neutral-950/95 border border-[#1DB954]/40 shadow-2xl backdrop-blur-xl animate-in slide-in-from-bottom-5 duration-300 pointer-events-auto"
+          className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))] left-4 right-4 z-50 p-3 rounded-2xl bg-neutral-950/95 border border-[#1DB954]/40 shadow-2xl backdrop-blur-xl animate-in slide-in-from-bottom-5 duration-300 pointer-events-auto"
         >
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5 min-w-0">
