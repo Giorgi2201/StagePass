@@ -180,7 +180,7 @@ export function StepSuccess() {
           </h1>
           <p className="text-xs sm:text-sm text-[#B3B3B3]">
             {youtubeResult && !creationResult
-              ? "Queued dynamically on YouTube & YouTube Music — tap Save or '+' to add to your library."
+              ? "Queued on YouTube — tap '+' or 'Save' to add to your library."
               : "Available immediately in your music library on iOS, Android, and Desktop."}
           </p>
         </div>
@@ -207,44 +207,26 @@ export function StepSuccess() {
         </div>
 
         {/* Multi-Platform Launcher Cards */}
-        <div className="pt-2 flex flex-col items-center justify-center gap-3 w-full">
-          {/* YouTube & YouTube Music Dual Launcher Card */}
+        <div className="pt-2 flex flex-col items-center justify-center gap-3.5 w-full">
+          {/* YouTube Single Primary Action Card */}
           {youtubeResult?.youtubeUrl && (
-            <div className="w-full flex flex-col items-center gap-2.5 p-4 rounded-2xl bg-black/40 border border-neutral-800">
-              <div className="w-full flex flex-col sm:flex-row items-stretch justify-center gap-2.5">
-                {/* Open in YouTube */}
-                <a
-                  href={youtubeResult.youtubeUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-1 h-12 inline-flex items-center justify-center gap-2 px-4 rounded-full bg-[#FF0000] hover:bg-[#E60000] text-white font-extrabold text-xs sm:text-sm shadow-xl shadow-[#FF0000]/25 active:scale-[0.98] transition-all whitespace-nowrap"
-                >
-                  <svg className="w-4 h-4 fill-white shrink-0" viewBox="0 0 24 24">
-                    <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
-                  </svg>
-                  <span>Open in YouTube</span>
-                  <ExternalLink className="w-3.5 h-3.5 text-white/80 shrink-0" />
-                </a>
+            <div className="w-full flex flex-col items-center gap-3 p-4 sm:p-5 rounded-2xl bg-black/40 border border-neutral-800">
+              {/* Single High-Impact Full-Width YouTube Button */}
+              <a
+                href={youtubeResult.youtubeUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full h-12 inline-flex items-center justify-center gap-2.5 px-6 rounded-xl bg-[#FF0000] hover:bg-[#e60000] text-white font-semibold text-base shadow-lg shadow-[#FF0000]/25 active:scale-[0.98] transition-all cursor-pointer"
+              >
+                <svg className="w-5 h-5 fill-white shrink-0" viewBox="0 0 24 24">
+                  <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+                </svg>
+                <span>Open in YouTube</span>
+                <ExternalLink className="w-4 h-4 text-white/90 shrink-0" />
+              </a>
 
-                {/* Open in YouTube Music */}
-                <a
-                  href={youtubeResult.youtubeMusicUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-1 h-12 inline-flex items-center justify-center gap-2 px-4 rounded-full bg-[#242424] hover:bg-[#303030] border border-neutral-700 text-white font-extrabold text-xs sm:text-sm shadow-md active:scale-[0.98] transition-all whitespace-nowrap"
-                >
-                  <div className="w-4 h-4 rounded-full bg-[#FF0000] flex items-center justify-center shrink-0">
-                    <svg className="w-2.5 h-2.5 fill-white ml-0.5" viewBox="0 0 24 24">
-                      <polygon points="5 3 19 12 5 21 5 3"/>
-                    </svg>
-                  </div>
-                  <span>Open in YouTube Music</span>
-                  <ExternalLink className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
-                </a>
-              </div>
-
-              <p className="text-[11px] text-zinc-400 font-medium text-center">
-                Tap the &apos;+&apos; or &apos;Save&apos; button in YouTube to permanently add this to your personal library.
+              <p className="text-xs text-neutral-400 font-medium text-center">
+                Tap the &apos;+&apos; or &apos;Save&apos; button in YouTube to permanently add this playlist to your library.
               </p>
             </div>
           )}
@@ -256,7 +238,7 @@ export function StepSuccess() {
                 href={creationResult.playlistUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex-1 min-h-[44px] inline-flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-full bg-[#1DB954] hover:bg-[#1ed760] text-black font-extrabold text-sm shadow-xl shadow-[#1DB954]/30 active:scale-[0.98] transition-all"
+                className="flex-1 h-12 inline-flex items-center justify-center gap-2.5 px-6 rounded-xl bg-[#1DB954] hover:bg-[#1ed760] text-black font-semibold text-sm shadow-xl shadow-[#1DB954]/30 active:scale-[0.98] transition-all"
               >
                 <svg
                   className="w-5 h-5 fill-black shrink-0"
@@ -272,7 +254,7 @@ export function StepSuccess() {
               <button
                 type="button"
                 onClick={handleCopyLink}
-                className="min-h-[44px] inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-full bg-[#282828] hover:bg-[#333333] text-white font-bold text-xs sm:text-sm border border-neutral-700 active:scale-[0.98] transition-all"
+                className="h-12 inline-flex items-center justify-center gap-2 px-5 rounded-xl bg-[#282828] hover:bg-[#333333] text-white font-semibold text-xs sm:text-sm border border-neutral-700 active:scale-[0.98] transition-all"
               >
                 <Share2 className="w-4 h-4 text-zinc-300" />
                 <span>{copiedLink ? "Copied Link!" : "Share Playlist"}</span>
@@ -281,11 +263,11 @@ export function StepSuccess() {
           )}
 
           {/* Universal "Copy Tracklist as Text" Action */}
-          <div className="w-full flex flex-col items-center gap-1.5 pt-1">
+          <div className="w-full flex flex-col items-center gap-2 pt-1">
             <button
               type="button"
               onClick={handleCopyTracklistText}
-              className="w-full min-h-[44px] inline-flex items-center justify-center gap-2.5 px-6 py-3 rounded-full bg-white/5 hover:bg-white/10 active:bg-white/15 border border-white/15 hover:border-white/25 text-white font-bold text-xs sm:text-sm transition-all active:scale-[0.98] cursor-pointer"
+              className="w-full h-12 inline-flex items-center justify-center gap-2.5 px-6 rounded-xl bg-white/5 hover:bg-white/10 active:bg-white/15 border border-white/15 hover:border-white/25 text-white font-semibold text-sm transition-all active:scale-[0.98] cursor-pointer"
             >
               {copiedText ? (
                 <>
@@ -299,7 +281,7 @@ export function StepSuccess() {
                 </>
               )}
             </button>
-            <span className="text-[10px] text-zinc-500 text-center">
+            <span className="text-[11px] text-zinc-500 text-center">
               Paste anywhere or import to Apple Music, Tidal & Amazon Music via SongShift or TuneMyMusic
             </span>
           </div>
