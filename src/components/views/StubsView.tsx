@@ -15,12 +15,9 @@ import {
   Music2,
   ExternalLink,
   Trash2,
-  Calendar,
   MapPin,
-  Flame,
   ArrowRight,
   Headphones,
-  CheckCircle2,
 } from "lucide-react";
 import { mediumTap, tickHaptic } from "@/lib/haptics";
 

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useSyncExternalStore } from "react";
+import React, { useState, useSyncExternalStore } from "react";
 import Image from "next/image";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -13,7 +13,6 @@ import {
   ShieldCheck,
   Radio,
   LogOut,
-  Sparkles,
   Download,
   Palette,
   Check,
@@ -41,6 +40,20 @@ function getStandaloneSnapshot(): boolean {
 
 function getServerStandaloneSnapshot(): boolean {
   return false;
+}
+
+function subscribeTheme(callback: () => void) {
+  if (typeof window === "undefined") return () => {};
+  window.addEventListener("stagepass_theme_pref_updated", callback);
+  return () => window.removeEventListener("stagepass_theme_pref_updated", callback);
+}
+
+function getThemeSnapshot(): TicketTheme {
+  return getDefaultTicketTheme();
+}
+
+function getServerThemeSnapshot(): TicketTheme {
+  return "spotify";
 }
 
 const THEME_OPTIONS: {
@@ -75,9 +88,14 @@ const THEME_OPTIONS: {
 
 export function ProfileView() {
   const { user, isAuthenticated, logout, login } = useAuth();
-  const [selectedTheme, setSelectedTheme] = useState<TicketTheme>("spotify");
   const [isConfirmingDisconnect, setIsConfirmingDisconnect] = useState(false);
   const [showInstallGuide, setShowInstallGuide] = useState(false);
+
+  const selectedTheme = useSyncExternalStore(
+    subscribeTheme,
+    getThemeSnapshot,
+    getServerThemeSnapshot
+  );
 
   const isStandalone = useSyncExternalStore(
     subscribeStandalone,
@@ -85,25 +103,8 @@ export function ProfileView() {
     getServerStandaloneSnapshot
   );
 
-  useEffect(() => {
-    setSelectedTheme(getDefaultTicketTheme());
-
-    const handleThemeChange = (e: Event) => {
-      const customEvent = e as CustomEvent<TicketTheme>;
-      if (customEvent.detail) {
-        setSelectedTheme(customEvent.detail);
-      }
-    };
-
-    window.addEventListener("stagepass_theme_pref_updated", handleThemeChange);
-    return () => {
-      window.removeEventListener("stagepass_theme_pref_updated", handleThemeChange);
-    };
-  }, []);
-
   const handleSelectTheme = (theme: TicketTheme) => {
     tickHaptic();
-    setSelectedTheme(theme);
     setDefaultTicketTheme(theme);
   };
 

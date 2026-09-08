@@ -7,7 +7,6 @@ import { useWizard } from "@/context/WizardContext";
 import type { NormalizedArtist } from "@/types/setlist";
 import {
   Flame,
-  Sparkles,
   MapPin,
   Calendar,
   Loader2,

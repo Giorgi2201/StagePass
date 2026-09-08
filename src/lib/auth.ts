@@ -20,6 +20,71 @@ export const SESSION_COOKIE_NAME = "stagepass_session";
 export const AUTH_STATE_COOKIE_NAME = "stagepass_auth_state";
 
 /**
+ * Resolves the canonical base URL for the application based on the incoming request.
+ * Resilient to:
+ * 1. Localhost vs 127.0.0.1 origin mismatches in local development
+ * 2. Next.js internal request.url defaulting to localhost
+ * 3. Reverse proxies on Vercel/production (x-forwarded-proto, x-forwarded-host)
+ * 4. NEXT_PUBLIC_BASE_URL in production
+ */
+export function getAppBaseUrl(request: Request): string {
+  // 1. In production, NEXT_PUBLIC_BASE_URL is the canonical truth if set and not local
+  if (
+    process.env.NODE_ENV === "production" &&
+    process.env.NEXT_PUBLIC_BASE_URL?.trim()
+  ) {
+    const configured = process.env.NEXT_PUBLIC_BASE_URL.trim().replace(/\/+$/, "");
+    if (!configured.includes("localhost") && !configured.includes("127.0.0.1")) {
+      return configured;
+    }
+  }
+
+  // 2. Check reverse proxy headers for production (e.g. Vercel, Cloudflare, ngrok)
+  const forwardedHost = request.headers.get("x-forwarded-host");
+  const forwardedProto = request.headers.get("x-forwarded-proto");
+  if (
+    forwardedHost &&
+    !forwardedHost.includes("localhost") &&
+    !forwardedHost.includes("127.0.0.1")
+  ) {
+    const proto = forwardedProto || "https";
+    return `${proto}://${forwardedHost}`;
+  }
+
+  // 3. Direct Host header check (for custom domain production setups)
+  const host = request.headers.get("host");
+  if (
+    host &&
+    !host.includes("localhost") &&
+    !host.includes("127.0.0.1")
+  ) {
+    const proto =
+      forwardedProto || (request.url.startsWith("https") ? "https" : "http");
+    return `${proto}://${host}`;
+  }
+
+  // 4. In local development or fallback:
+  // Spotify strictly rejects "http://localhost:3000/api/auth/callback" for security reasons.
+  // The registered redirect URI in Spotify Developer Dashboard is strictly 127.0.0.1:3000.
+  if (process.env.NEXT_PUBLIC_BASE_URL?.trim()) {
+    const configured = process.env.NEXT_PUBLIC_BASE_URL.trim().replace(/\/+$/, "");
+    if (configured.includes("127.0.0.1")) {
+      return configured;
+    }
+  }
+
+  return "http://127.0.0.1:3000";
+}
+
+/**
+ * Resolves the canonical Spotify OAuth redirect URI.
+ * Must match character-for-character between login and callback.
+ */
+export function getSpotifyRedirectUri(request: Request): string {
+  return `${getAppBaseUrl(request)}/api/auth/callback`;
+}
+
+/**
  * Derives a 256-bit cryptographic key from SESSION_SECRET for AES-256-GCM JWE encryption
  */
 async function getEncryptionKey(): Promise<Uint8Array> {
@@ -58,7 +123,8 @@ export async function decryptSession(
     const key = await getEncryptionKey();
     const { plaintext } = await compactDecrypt(token, key);
     return JSON.parse(new TextDecoder().decode(plaintext)) as SessionPayload;
-  } catch {
+  } catch (err) {
+    console.warn("[Auth] Failed to decrypt session JWE:", err);
     return null;
   }
 }
@@ -66,7 +132,7 @@ export async function decryptSession(
 /**
  * Retrieves and decrypts the current user session from the HTTP-only cookie
  */
-export async function getSession(): Promise<SessionPayload | null> {
+async function getSession(): Promise<SessionPayload | null> {
   const cookieStore = await cookies();
   const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME)?.value;
   if (!sessionCookie) return null;

@@ -65,7 +65,7 @@ const COLLAB_SEPARATORS =
 const TRIBUTE_REGEX =
   /\b(tribute|impersonator|cover\s*band|cover\s*brasil|experience|bootleg|orchestra|ensemble)\b/i;
 
-export interface ArtistRelevanceScore {
+interface ArtistRelevanceScore {
   tier: 1 | 2 | 3 | 4 | 5;
   score: number;
   reason: string;
@@ -79,7 +79,7 @@ export interface ArtistRelevanceScore {
  * - Tier 4: Collaborative Noise & One-off Guest Features ("Lil Wayne feat. Kanye West")
  * - Tier 5: Tribute & Cover Bands (demoted below all original cataloged artists)
  */
-export function scoreArtistRelevance(
+function scoreArtistRelevance(
   name: string,
   disambiguation: string | undefined,
   query: string
@@ -222,7 +222,7 @@ export async function searchArtists(
  * handling Setlist.fm quirks where `sets` can be empty string, null,
  * or `sets.set` can be a single object instead of an array.
  */
-export function extractRawSets(setlist: RawSetlist): RawSet[] {
+function extractRawSets(setlist: RawSetlist): RawSet[] {
   if (!setlist || !setlist.sets || typeof setlist.sets !== "object") {
     return [];
   }
@@ -249,7 +249,7 @@ export function extractRawSets(setlist: RawSetlist): RawSet[] {
  * Safely extracts an array of RawSong objects from a set.song field,
  * handling cases where `song` is a single object, an array, empty string, or undefined.
  */
-export function extractRawSongs(songField: unknown): RawSong[] {
+function extractRawSongs(songField: unknown): RawSong[] {
   if (!songField) {
     return [];
   }
@@ -282,7 +282,7 @@ export function extractRawSongs(songField: unknown): RawSong[] {
  * Robust helper to count valid, non-tape songs in a raw setlist.
  * Handles all Setlist.fm JSON variations without throwing runtime errors.
  */
-export function countSongsInSetlist(setlist: RawSetlist): number {
+function countSongsInSetlist(setlist: RawSetlist): number {
   const sets = extractRawSets(setlist);
   if (sets.length === 0) return 0;
 
@@ -302,7 +302,7 @@ export function countSongsInSetlist(setlist: RawSetlist): number {
 /**
  * Safely parses "DD-MM-YYYY" into a numeric timestamp for sorting descending
  */
-export function parseEventDate(dateStr?: string): number {
+function parseEventDate(dateStr?: string): number {
   if (!dateStr) return 0;
   const parts = dateStr.split("-");
   if (parts.length === 3) {

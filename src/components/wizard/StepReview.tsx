@@ -1,7 +1,10 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { useWizard } from "@/context/WizardContext";
+import { useAuth } from "@/context/AuthContext";
+import { TicketModal } from "@/components/ticket/TicketModal";
+import { saveTicketStub, getDefaultTicketTheme } from "@/lib/storage";
 import {
   ChevronLeft,
   Music2,
@@ -13,6 +16,7 @@ import {
   Loader2,
   AlertCircle,
   TrendingUp,
+  Ticket,
 } from "lucide-react";
 import { mediumTap } from "@/lib/haptics";
 
@@ -20,6 +24,8 @@ export function StepReview() {
   const {
     mode,
     parseResult,
+    selectedArtist,
+    selectedShow,
     excludedTrackIndices,
     toggleTrack,
     playlistTitle,
@@ -30,7 +36,11 @@ export function StepReview() {
     isGenerating,
     goBack,
     errorMessage,
+    savePendingWizardState,
   } = useWizard();
+
+  const { isAuthenticated, login } = useAuth();
+  const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
 
   if (!parseResult) {
     return null;
@@ -38,6 +48,55 @@ export function StepReview() {
 
   const activeTracksCount =
     parseResult.tracks.length - excludedTrackIndices.size;
+
+  const handleCreatePlaylistClick = () => {
+    mediumTap();
+    if (!isAuthenticated) {
+      savePendingWizardState();
+      login();
+      return;
+    }
+    createPlaylist();
+  };
+
+  const handleOpenTicketStub = () => {
+    mediumTap();
+    if (!parseResult) return;
+
+    try {
+      const isEssential = parseResult.mode === "essential";
+      const activeTracks = parseResult.tracks.filter(
+        (_, index) => !excludedTrackIndices.has(index)
+      );
+
+      saveTicketStub({
+        artistName: selectedArtist?.name || parseResult.artistName || "Concert Artist",
+        artistImageUrl: selectedArtist?.imageUrl || null,
+        tourName:
+          parseResult.tourName ||
+          selectedShow?.tourName ||
+          (isEssential ? "Essential Hits & Fan Favorites" : "Concert Tour"),
+        venueName: isEssential
+          ? "STUDIO DISCOGRAPHY"
+          : selectedShow?.venueName || parseResult.venueInfo || "Main Stage Arena",
+        cityName: isEssential
+          ? "GLOBAL ESSENTIALS"
+          : selectedShow?.cityName || "Global Tour",
+        eventDate: isEssential
+          ? "STUDIO 2026"
+          : selectedShow?.eventDate || "LIVE 2026",
+        mode: parseResult.mode || "rehearsal",
+        tracks: activeTracks.length > 0 ? activeTracks : parseResult.tracks,
+        playlistUrl: "",
+        playlistId: `stub_${Date.now()}`,
+        theme: getDefaultTicketTheme(),
+      });
+    } catch (err) {
+      console.error("Error saving ticket stub:", err);
+    }
+
+    setIsTicketModalOpen(true);
+  };
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
@@ -146,13 +205,14 @@ export function StepReview() {
             {/* Quick-Action Create Button in Top Header */}
             <button
               type="button"
-              onClick={() => {
-                mediumTap();
-                createPlaylist();
-              }}
+              onClick={handleCreatePlaylistClick}
               disabled={isGenerating || activeTracksCount === 0}
               className="flex-1 sm:flex-initial h-11 px-4 sm:px-5 rounded-xl bg-[#1DB954] hover:bg-[#1ed760] disabled:bg-[#1DB954]/50 text-black font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-[#1DB954]/20 active:scale-[0.97] transition-all cursor-pointer disabled:cursor-not-allowed shrink-0"
-              title={`Create playlist with ${activeTracksCount} tracks`}
+              title={
+                isAuthenticated
+                  ? `Create playlist with ${activeTracksCount} tracks`
+                  : `Connect Spotify to create playlist with ${activeTracksCount} tracks`
+              }
             >
               {isGenerating ? (
                 <>
@@ -168,7 +228,7 @@ export function StepReview() {
                   >
                     <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.498 17.306c-.216.353-.674.467-1.027.25-2.813-1.718-6.354-2.107-10.526-1.155-.403.092-.806-.16-.898-.563-.092-.403.16-.806.563-.898 4.568-1.044 8.484-.606 11.638 1.328.353.216.467.674.25 1.027zm1.467-3.262c-.272.441-.849.582-1.29.31-3.22-1.979-8.128-2.551-11.936-1.394-.497.151-1.029-.133-1.18-.63-.151-.497.133-1.029.63-1.18 4.354-1.322 9.774-.684 13.466 1.583.441.272.582.849.31 1.291zm.126-3.41c-3.861-2.293-10.223-2.504-13.889-1.391-.592.18-1.223-.155-1.403-.747-.18-.592.155-1.223.747-1.403 4.218-1.28 11.238-1.033 15.688 1.609.533.316.707 1.009.391 1.542-.316.533-1.009.707-1.542.391z" />
                   </svg>
-                  <span>Create</span>
+                  <span>{isAuthenticated ? "Create" : "Connect"}</span>
                 </>
               )}
             </button>
@@ -331,7 +391,7 @@ export function StepReview() {
         </div>
       </div>
 
-      {/* Primary Action Section: Inline at the end of the setlist */}
+      {/* Primary & Secondary Action Section: Inline at the end of the setlist */}
       <div className="mt-8 flex flex-col items-center justify-center text-center space-y-3">
         {/* Track selection summary counter */}
         <div className="flex items-center gap-2 text-xs text-[#B3B3B3]">
@@ -340,41 +400,94 @@ export function StepReview() {
           <span>Est. playlist duration: ~{activeTracksCount * 4} min</span>
         </div>
 
-        {/* Prominent Spotify Green Button */}
-        <button
-          type="button"
-          onClick={() => {
-            mediumTap();
-            createPlaylist();
-          }}
-          disabled={isGenerating || activeTracksCount === 0}
-          className="w-full max-w-md inline-flex items-center justify-center gap-3 px-8 py-4 rounded-full bg-[#1DB954] hover:bg-[#1ed760] disabled:bg-[#1DB954]/50 text-black font-extrabold text-base shadow-xl shadow-[#1DB954]/25 hover:shadow-[#1DB954]/40 active:scale-[0.98] transition-all cursor-pointer disabled:cursor-not-allowed"
-        >
-          {isGenerating ? (
-            <>
-              <Loader2 className="w-5 h-5 animate-spin" />
-              <span>Building Spotify Playlist...</span>
-            </>
-          ) : (
-            <>
-              {/* Official Spotify Icon SVG */}
-              <svg
-                className="w-5 h-5 fill-black shrink-0"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.498 17.306c-.216.353-.674.467-1.027.25-2.813-1.718-6.354-2.107-10.526-1.155-.403.092-.806-.16-.898-.563-.092-.403.16-.806.563-.898 4.568-1.044 8.484-.606 11.638 1.328.353.216.467.674.25 1.027zm1.467-3.262c-.272.441-.849.582-1.29.31-3.22-1.979-8.128-2.551-11.936-1.394-.497.151-1.029-.133-1.18-.63-.151-.497.133-1.029.63-1.18 4.354-1.322 9.774-.684 13.466 1.583.441.272.582.849.31 1.291zm.126-3.41c-3.861-2.293-10.223-2.504-13.889-1.391-.592.18-1.223-.155-1.403-.747-.18-.592.155-1.223.747-1.403 4.218-1.28 11.238-1.033 15.688 1.609.533.316.707 1.009.391 1.542-.316.533-1.009.707-1.542.391z" />
-              </svg>
-              <span>Create Spotify Playlist ({activeTracksCount} tracks)</span>
-            </>
-          )}
-        </button>
+        {/* Action Buttons Container */}
+        <div className="w-full max-w-md flex flex-col items-stretch gap-2.5">
+          {/* Prominent Spotify Button */}
+          <button
+            type="button"
+            onClick={handleCreatePlaylistClick}
+            disabled={isGenerating || activeTracksCount === 0}
+            className="w-full inline-flex items-center justify-center gap-3 px-8 py-4 rounded-full bg-[#1DB954] hover:bg-[#1ed760] disabled:bg-[#1DB954]/50 text-black font-extrabold text-base shadow-xl shadow-[#1DB954]/25 hover:shadow-[#1DB954]/40 active:scale-[0.98] transition-all cursor-pointer disabled:cursor-not-allowed"
+          >
+            {isGenerating ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span>Building Spotify Playlist...</span>
+              </>
+            ) : (
+              <>
+                {/* Official Spotify Icon SVG */}
+                <svg
+                  className="w-5 h-5 fill-black shrink-0"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.498 17.306c-.216.353-.674.467-1.027.25-2.813-1.718-6.354-2.107-10.526-1.155-.403.092-.806-.16-.898-.563-.092-.403.16-.806.563-.898 4.568-1.044 8.484-.606 11.638 1.328.353.216.467.674.25 1.027zm1.467-3.262c-.272.441-.849.582-1.29.31-3.22-1.979-8.128-2.551-11.936-1.394-.497.151-1.029-.133-1.18-.63-.151-.497.133-1.029.63-1.18 4.354-1.322 9.774-.684 13.466 1.583.441.272.582.849.31 1.291zm.126-3.41c-3.861-2.293-10.223-2.504-13.889-1.391-.592.18-1.223-.155-1.403-.747-.18-.592.155-1.223.747-1.403 4.218-1.28 11.238-1.033 15.688 1.609.533.316.707 1.009.391 1.542-.316.533-1.009.707-1.542.391z" />
+                </svg>
+                <span>
+                  {isAuthenticated
+                    ? `Create Spotify Playlist (${activeTracksCount} tracks)`
+                    : `Connect Spotify & Save Playlist (${activeTracksCount} tracks)`}
+                </span>
+              </>
+            )}
+          </button>
 
-        {/* Subtle helper line */}
+          {/* Prominent Secondary Action Button: Customize & Download Ticket Stub */}
+          <button
+            type="button"
+            onClick={handleOpenTicketStub}
+            className="w-full inline-flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-full bg-white/5 hover:bg-white/10 active:bg-white/15 border border-white/15 hover:border-white/25 text-white font-bold text-sm sm:text-base shadow-lg backdrop-blur-md active:scale-[0.98] transition-all cursor-pointer"
+          >
+            <Ticket className="w-5 h-5 text-[#1DB954] shrink-0" />
+            <span>Customize & Download Ticket Stub</span>
+          </button>
+        </div>
+
+        {/* Subtle helper line with calibrated bottom margin */}
         <p className="text-xs text-zinc-500 font-medium mb-5">
-          Playlist will be saved directly to your Spotify library
+          {isAuthenticated
+            ? "Playlist will be saved directly to your Spotify library"
+            : "Free instant ticket stubs • Connect Spotify anytime to sync playlists"}
         </p>
       </div>
+
+      {/* Ticket Modal instance when previewing/customizing stub */}
+      {isTicketModalOpen && (
+        <TicketModal
+          isOpen={isTicketModalOpen}
+          onClose={() => setIsTicketModalOpen(false)}
+          artistName={selectedArtist?.name || parseResult.artistName || "Concert Artist"}
+          tourName={
+            parseResult.tourName ||
+            selectedShow?.tourName ||
+            (parseResult.mode === "essential" ? "Essential Hits & Fan Favorites" : undefined)
+          }
+          venueName={
+            parseResult.mode === "essential"
+              ? "STUDIO DISCOGRAPHY"
+              : selectedShow?.venueName || parseResult.venueInfo || "Main Stage Arena"
+          }
+          cityName={
+            parseResult.mode === "essential"
+              ? "GLOBAL ESSENTIALS"
+              : selectedShow?.cityName || "Global Tour"
+          }
+          countryName={parseResult.mode === "essential" ? undefined : selectedShow?.countryName}
+          eventDate={
+            parseResult.mode === "essential"
+              ? "STUDIO 2026"
+              : selectedShow?.eventDate || "LIVE 2026"
+          }
+          tracks={
+            parseResult.tracks.filter((_, index) => !excludedTrackIndices.has(index)).length > 0
+              ? parseResult.tracks.filter((_, index) => !excludedTrackIndices.has(index))
+              : parseResult.tracks
+          }
+          playlistUrl=""
+          mode={parseResult.mode}
+        />
+      )}
     </div>
   );
 }

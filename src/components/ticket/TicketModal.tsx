@@ -64,11 +64,11 @@ export function TicketModal({
   const [seat, setSeat] = useState("042");
 
   // Synchronize theme when opening with specific initialTheme
-  useEffect(() => {
-    if (isOpen) {
-      setTheme(initialTheme || getDefaultTicketTheme());
-    }
-  }, [isOpen, initialTheme]);
+  const [prevInitialTheme, setPrevInitialTheme] = useState(initialTheme);
+  if (initialTheme !== prevInitialTheme) {
+    setPrevInitialTheme(initialTheme);
+    setTheme(initialTheme || getDefaultTicketTheme());
+  }
 
   const [isSharing, setIsSharing] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);

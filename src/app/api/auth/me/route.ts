@@ -1,15 +1,27 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import {
+  SESSION_COOKIE_NAME,
   clearSessionCookie,
-  getSession,
+  decryptSession,
   refreshSpotifyToken,
   setSessionCookie,
 } from "@/lib/auth";
 
 export async function GET() {
-  const session = await getSession();
+  const cookieStore = await cookies();
+  const sessionCookie = cookieStore.get(SESSION_COOKIE_NAME)?.value;
 
-  if (!session) {
+  if (!sessionCookie) {
+    return NextResponse.json({
+      isAuthenticated: false,
+      user: null,
+    });
+  }
+
+  const session = await decryptSession(sessionCookie);
+
+  if (!session || !session.user?.id) {
     return NextResponse.json({
       isAuthenticated: false,
       user: null,
@@ -24,7 +36,9 @@ export async function GET() {
     const refreshed = await refreshSpotifyToken(session.refreshToken);
 
     if (!refreshed) {
-      // Refresh token is revoked or network failed; clear session
+      console.warn(
+        `[/api/auth/me] Refresh token failed or revoked for "${session.user.displayName}". Clearing session.`
+      );
       await clearSessionCookie();
       return NextResponse.json({
         isAuthenticated: false,
@@ -32,7 +46,6 @@ export async function GET() {
       });
     }
 
-    // Update session with new token and expiry
     const updatedSession = {
       ...session,
       accessToken: refreshed.accessToken,

@@ -13,7 +13,7 @@ const SPOTIFY_API_BASE_URL = "https://api.spotify.com/v1";
  * Strips common setlist annotations, quotation marks, and noise
  * that cause exact Spotify searches to fail
  */
-export function sanitizeTrackTitle(title: string): string {
+function sanitizeTrackTitle(title: string): string {
   if (!title) return "";
 
   let cleaned = title;
@@ -72,7 +72,7 @@ async function searchSpotify(
  * Resolves a single setlist track to the best matching SpotifyTrack
  * using multi-tier fallback and popularity scoring
  */
-export async function findBestSpotifyTrack(
+async function findBestSpotifyTrack(
   trackName: string,
   performingArtist: string,
   originalArtist?: string,
@@ -82,28 +82,31 @@ export async function findBestSpotifyTrack(
   const cleanTitle = sanitizeTrackTitle(trackName);
   if (!cleanTitle) return null;
 
+  const token = userAccessToken || (await getActiveSpotifyToken()) || "";
+  if (!token) return null;
+
   // Tier 1: Targeted search with field filters
   // e.g. track:"Higher Power" artist:"Coldplay"
   let candidates: SpotifyTrack[] = [];
   const tier1Query = `track:"${cleanTitle}" artist:"${performingArtist}"`;
-  candidates = await searchSpotify(tier1Query, userAccessToken);
+  candidates = await searchSpotify(tier1Query, token);
 
   // Tier 2: Cover fallback (if isCover is true and performing artist had no match)
   if (candidates.length === 0 && isCover && originalArtist) {
     const cleanOriginal = sanitizeTrackTitle(originalArtist);
     const tier2Query = `track:"${cleanTitle}" artist:"${cleanOriginal}"`;
-    candidates = await searchSpotify(tier2Query, userAccessToken);
+    candidates = await searchSpotify(tier2Query, token);
   }
 
   // Tier 3: Fuzzy keyword search
   if (candidates.length === 0) {
     const tier3Query = `"${cleanTitle}" "${performingArtist}"`;
-    candidates = await searchSpotify(tier3Query, userAccessToken);
+    candidates = await searchSpotify(tier3Query, token);
   }
 
   // Tier 3b: Fallback to title only if still no match
   if (candidates.length === 0) {
-    candidates = await searchSpotify(`"${cleanTitle}"`, userAccessToken);
+    candidates = await searchSpotify(`"${cleanTitle}"`, token);
   }
 
   if (candidates.length === 0) {
@@ -256,7 +259,7 @@ let cachedAppToken: { token: string; expiresAt: number } | null = null;
 /**
  * Retrieves a client credentials access token for public Spotify catalog searches
  */
-export async function getClientCredentialsToken(): Promise<string | null> {
+async function getClientCredentialsToken(): Promise<string | null> {
   if (cachedAppToken && Date.now() < cachedAppToken.expiresAt - 60000) {
     return cachedAppToken.token;
   }
@@ -308,7 +311,7 @@ export async function getClientCredentialsToken(): Promise<string | null> {
  * Obtains an active Spotify access token using the user's session if present,
  * or falling back to the application client credentials token.
  */
-export async function getActiveSpotifyToken(): Promise<string | null> {
+async function getActiveSpotifyToken(): Promise<string | null> {
   try {
     const session = await getValidSession();
     if (session?.accessToken) {
@@ -338,7 +341,7 @@ interface SpotifyArtistSearchResponse {
 /**
  * Searches Spotify for an artist by name and extracts their medium-sized profile image
  */
-export async function fetchArtistImageUrl(
+async function fetchArtistImageUrl(
   artistName: string,
   accessToken: string
 ): Promise<string | null> {
@@ -448,7 +451,7 @@ export async function enrichArtistsWithSpotifyImages(
  * Normalizes song titles for intelligent deduplication across album,
  * single, deluxe, remastered, and compilation versions
  */
-export function normalizeSongTitleForDeduplication(title: string): string {
+function normalizeSongTitleForDeduplication(title: string): string {
   if (!title) return "";
   let clean = title.toLowerCase();
 

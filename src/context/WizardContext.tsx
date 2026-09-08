@@ -4,6 +4,7 @@ import React, {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useState,
 } from "react";
 import type {
@@ -12,6 +13,7 @@ import type {
   SetlistParseResult,
 } from "@/types/setlist";
 import type { CreatePlaylistResponse } from "@/types/spotify";
+import { useAuth } from "@/context/AuthContext";
 
 export type WizardStep = "search" | "shows" | "review" | "success";
 export type WizardMode = "rehearsal" | "memory" | "essential";
@@ -45,32 +47,100 @@ interface WizardContextType {
   goToStep: (step: WizardStep) => void;
   goBack: () => void;
   resetWizard: () => void;
+  savePendingWizardState: () => void;
 }
 
 const WizardContext = createContext<WizardContextType | undefined>(undefined);
 
+interface PendingWizardBackup {
+  selectedArtist?: NormalizedArtist | null;
+  selectedShow?: NormalizedShow | null;
+  parseResult?: SetlistParseResult | null;
+  mode?: WizardMode;
+  playlistTitle?: string;
+  excludedTrackIndices?: number[];
+}
+
+function getPendingWizardBackup(): PendingWizardBackup | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem("stagepass_pending_wizard");
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    return data && data.parseResult ? data : null;
+  } catch {
+    return null;
+  }
+}
+
 export function WizardProvider({ children }: { children: React.ReactNode }) {
-  const [step, setStep] = useState<WizardStep>("search");
-  const [mode, setModeState] = useState<WizardMode>("rehearsal");
-  const [artistQuery, setArtistQuery] = useState<string>("");
-  const [selectedArtist, setSelectedArtist] = useState<NormalizedArtist | null>(
-    null
+  const [initialBackup] = useState<PendingWizardBackup | null>(getPendingWizardBackup);
+
+  const [step, setStep] = useState<WizardStep>(() =>
+    initialBackup?.parseResult ? "review" : "search"
   );
-  const [selectedShow, setSelectedShow] = useState<NormalizedShow | null>(null);
-  const [parseResult, setParseResult] = useState<SetlistParseResult | null>(
-    null
+  const [mode, setModeState] = useState<WizardMode>(() =>
+    initialBackup?.mode || "rehearsal"
+  );
+  const [artistQuery, setArtistQuery] = useState<string>("");
+  const [selectedArtist, setSelectedArtist] = useState<NormalizedArtist | null>(() =>
+    initialBackup?.selectedArtist || null
+  );
+  const [selectedShow, setSelectedShow] = useState<NormalizedShow | null>(() =>
+    initialBackup?.selectedShow || null
+  );
+  const [parseResult, setParseResult] = useState<SetlistParseResult | null>(() =>
+    initialBackup?.parseResult || null
   );
   const [isLoadingParse, setIsLoadingParse] = useState<boolean>(false);
-  const [excludedTrackIndices, setExcludedTrackIndices] = useState<Set<number>>(
-    new Set()
+  const [excludedTrackIndices, setExcludedTrackIndices] = useState<Set<number>>(() =>
+    initialBackup?.excludedTrackIndices
+      ? new Set(initialBackup.excludedTrackIndices)
+      : new Set()
   );
-  const [playlistTitle, setPlaylistTitle] = useState<string>("");
+  const [playlistTitle, setPlaylistTitle] = useState<string>(() =>
+    initialBackup?.playlistTitle || ""
+  );
   const [isPublic, setIsPublic] = useState<boolean>(false);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
   const [generationStatus, setGenerationStatus] = useState<string>("");
   const [creationResult, setCreationResult] =
     useState<CreatePlaylistResponse | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const { isAuthenticated } = useAuth();
+
+  const savePendingWizardState = useCallback(() => {
+    if (typeof window === "undefined" || !parseResult) return;
+    try {
+      const data = {
+        selectedArtist,
+        selectedShow,
+        parseResult,
+        mode,
+        playlistTitle,
+        excludedTrackIndices: Array.from(excludedTrackIndices),
+        savedAt: Date.now(),
+      };
+      sessionStorage.setItem("stagepass_pending_wizard", JSON.stringify(data));
+    } catch (err) {
+      console.warn("Failed to serialize wizard state to sessionStorage:", err);
+    }
+  }, [
+    selectedArtist,
+    selectedShow,
+    parseResult,
+    mode,
+    playlistTitle,
+    excludedTrackIndices,
+  ]);
+
+  // Clear backup from sessionStorage once authentication completes successfully
+  useEffect(() => {
+    if (isAuthenticated && typeof window !== "undefined") {
+      sessionStorage.removeItem("stagepass_pending_wizard");
+    }
+  }, [isAuthenticated]);
 
   const setMode = useCallback((newMode: WizardMode) => {
     setModeState(newMode);
@@ -312,6 +382,9 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
     setGenerationStatus("");
     setCreationResult(null);
     setErrorMessage(null);
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem("stagepass_pending_wizard");
+    }
   }, []);
 
   return (
@@ -345,6 +418,7 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
         goToStep: setStep,
         goBack,
         resetWizard,
+        savePendingWizardState,
       }}
     >
       {children}

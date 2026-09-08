@@ -53,22 +53,6 @@ textarea {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
-.pl-safe {
-  padding-left: env(safe-area-inset-left, 0px);
-}
-
-.pr-safe {
-  padding-right: env(safe-area-inset-right, 0px);
-}
-
-.min-h-safe-screen {
-  min-height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
-}
-
-.h-safe-screen {
-  height: calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
-}
-
 /* GPU-Accelerated Audio Equalizer Animations for Splash Screen */
 @keyframes eqPulse1 {
   0%, 100% { transform: scaleY(0.25); opacity: 0.4; }
