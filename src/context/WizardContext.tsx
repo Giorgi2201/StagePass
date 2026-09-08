@@ -13,7 +13,9 @@ import type {
   SetlistParseResult,
 } from "@/types/setlist";
 import type { CreatePlaylistResponse } from "@/types/spotify";
+import type { YouTubePlaylistResponse } from "@/types/youtube";
 import { useAuth } from "@/context/AuthContext";
+import { saveTicketStub, getDefaultTicketTheme } from "@/lib/storage";
 
 export type WizardStep = "search" | "shows" | "review" | "success";
 export type WizardMode = "rehearsal" | "memory" | "essential";
@@ -32,6 +34,7 @@ interface WizardContextType {
   isGenerating: boolean;
   generationStatus: string;
   creationResult: CreatePlaylistResponse | null;
+  youtubeResult: YouTubePlaylistResponse | null;
   errorMessage: string | null;
 
   setMode: (mode: WizardMode) => void;
@@ -44,6 +47,8 @@ interface WizardContextType {
   setPlaylistTitle: (title: string) => void;
   setIsPublic: (isPublic: boolean) => void;
   createPlaylist: () => Promise<void>;
+  createYouTubePlaylist: () => Promise<YouTubePlaylistResponse | null>;
+  setYouTubeResult: (result: YouTubePlaylistResponse | null) => void;
   goToStep: (step: WizardStep) => void;
   goBack: () => void;
   resetWizard: () => void;
@@ -106,6 +111,8 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
   const [generationStatus, setGenerationStatus] = useState<string>("");
   const [creationResult, setCreationResult] =
     useState<CreatePlaylistResponse | null>(null);
+  const [youtubeResult, setYouTubeResult] =
+    useState<YouTubePlaylistResponse | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const { isAuthenticated } = useAuth();
@@ -358,6 +365,83 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
     }
   }, [parseResult, selectedArtist, excludedTrackIndices, playlistTitle, isPublic]);
 
+  const createYouTubePlaylist = useCallback(async (): Promise<YouTubePlaylistResponse | null> => {
+    if (!parseResult || !selectedArtist) return null;
+
+    // Filter out excluded tracks
+    const activeTracks = parseResult.tracks.filter(
+      (_, index) => !excludedTrackIndices.has(index)
+    );
+
+    if (activeTracks.length === 0) {
+      setErrorMessage("Please select at least one track to include in the playlist.");
+      return null;
+    }
+
+    setErrorMessage(null);
+
+    try {
+      const response = await fetch("/api/youtube/generate-playlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          concertTitle: playlistTitle.trim() || `${parseResult.artistName} Live Setlist`,
+          performingArtist: selectedArtist.name,
+          tracks: activeTracks,
+        }),
+      });
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || "Failed to resolve YouTube playlist");
+      }
+
+      const data: YouTubePlaylistResponse = await response.json();
+      setYouTubeResult(data);
+
+      // Automatically archive ticket into local browser storage via saveTicketStub
+      try {
+        const isEssential = parseResult.mode === "essential";
+        saveTicketStub({
+          artistName: selectedArtist.name,
+          artistImageUrl: selectedArtist.imageUrl || null,
+          tourName:
+            parseResult.tourName ||
+            selectedShow?.tourName ||
+            (isEssential ? "Essential Hits & Fan Favorites" : "Concert Tour"),
+          venueName: isEssential
+            ? "STUDIO DISCOGRAPHY"
+            : selectedShow?.venueName || parseResult.venueInfo || "Main Stage Arena",
+          cityName: isEssential
+            ? "GLOBAL ESSENTIALS"
+            : selectedShow?.cityName || "Global Tour",
+          eventDate: isEssential
+            ? "STUDIO 2026"
+            : selectedShow?.eventDate || "LIVE 2026",
+          mode: parseResult.mode || "rehearsal",
+          tracks: activeTracks,
+          playlistUrl: data.youtubeUrl,
+          playlistId: `yt_${Date.now()}`,
+          youtubeUrl: data.youtubeUrl,
+          youtubeMusicUrl: data.youtubeMusicUrl,
+          theme: getDefaultTicketTheme(),
+        });
+      } catch (storageErr) {
+        console.warn("Failed to auto-archive ticket stub for YouTube export:", storageErr);
+      }
+
+      // Smoothly transition wizard to Step 4 Success
+      setStep("success");
+      return data;
+    } catch (err) {
+      console.error("Error generating YouTube playlist:", err);
+      setErrorMessage(
+        err instanceof Error ? err.message : "Failed to generate YouTube playlist"
+      );
+      return null;
+    }
+  }, [parseResult, selectedArtist, excludedTrackIndices, playlistTitle, selectedShow]);
+
   const goBack = useCallback(() => {
     setErrorMessage(null);
     if (step === "shows") {
@@ -381,6 +465,7 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
     setIsGenerating(false);
     setGenerationStatus("");
     setCreationResult(null);
+    setYouTubeResult(null);
     setErrorMessage(null);
     if (typeof window !== "undefined") {
       sessionStorage.removeItem("stagepass_pending_wizard");
@@ -403,6 +488,7 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
         isGenerating,
         generationStatus,
         creationResult,
+        youtubeResult,
         errorMessage,
 
         setMode,
@@ -415,6 +501,8 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
         setPlaylistTitle,
         setIsPublic,
         createPlaylist,
+        createYouTubePlaylist,
+        setYouTubeResult,
         goToStep: setStep,
         goBack,
         resetWizard,

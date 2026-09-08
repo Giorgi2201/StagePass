@@ -15,6 +15,8 @@ export interface SavedTicket {
   tracks: NormalizedTrack[];
   playlistUrl: string;
   playlistId: string;
+  youtubeUrl?: string | null;
+  youtubeMusicUrl?: string | null;
   theme: TicketTheme;
   createdAt: number;
 }
@@ -52,33 +54,40 @@ export function getSavedTicketStubs(): SavedTicket[] {
 
 /**
  * Save a new ticket stub.
- * Prepends to the list and prevents duplicates by matching playlistId or id.
+ * Prepends to the list and prevents duplicates by matching id, playlistId, or youtubeUrl.
  */
 export function saveTicketStub(
   ticket: Omit<SavedTicket, "id" | "createdAt"> & { id?: string; createdAt?: number }
 ): SavedTicket {
   const existing = getSavedTicketStubs();
 
-  // Deduplicate by playlistId or id if already present
+  // Deduplicate by id, playlistId, or youtubeUrl if already present
   const duplicateIndex = existing.findIndex(
     (item) =>
+      (ticket.id && item.id === ticket.id) ||
       (ticket.playlistId && item.playlistId === ticket.playlistId) ||
-      (ticket.id && item.id === ticket.id)
+      (ticket.youtubeUrl && item.youtubeUrl && item.youtubeUrl === ticket.youtubeUrl)
   );
 
   const fullTicket: SavedTicket = {
     ...ticket,
+    youtubeUrl: ticket.youtubeUrl ?? null,
+    youtubeMusicUrl: ticket.youtubeMusicUrl ?? null,
     id: ticket.id || `ticket_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
     createdAt: ticket.createdAt || Date.now(),
   };
 
   let updatedList: SavedTicket[];
   if (duplicateIndex >= 0) {
-    // Update existing in-place
+    // Update existing in-place, preserving multi-platform URLs if already present
     updatedList = [...existing];
     updatedList[duplicateIndex] = {
       ...existing[duplicateIndex],
       ...fullTicket,
+      youtubeUrl: fullTicket.youtubeUrl ?? existing[duplicateIndex].youtubeUrl ?? null,
+      youtubeMusicUrl:
+        fullTicket.youtubeMusicUrl ?? existing[duplicateIndex].youtubeMusicUrl ?? null,
+      playlistUrl: fullTicket.playlistUrl || existing[duplicateIndex].playlistUrl || "",
     };
   } else {
     // Prepend new ticket

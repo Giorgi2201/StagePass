@@ -8,8 +8,6 @@ import { saveTicketStub, getDefaultTicketTheme } from "@/lib/storage";
 import {
   ChevronLeft,
   Music2,
-  Lock,
-  Globe,
   Check,
   Plus,
   Sparkles,
@@ -19,6 +17,7 @@ import {
   Ticket,
 } from "lucide-react";
 import { mediumTap } from "@/lib/haptics";
+import { SpotifyPrivacyModal } from "@/components/modals/SpotifyPrivacyModal";
 
 export function StepReview() {
   const {
@@ -33,6 +32,7 @@ export function StepReview() {
     isPublic,
     setIsPublic,
     createPlaylist,
+    createYouTubePlaylist,
     isGenerating,
     goBack,
     errorMessage,
@@ -41,6 +41,8 @@ export function StepReview() {
 
   const { isAuthenticated, login } = useAuth();
   const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
+  const [isSpotifyModalOpen, setIsSpotifyModalOpen] = useState(false);
+  const [isResolvingYouTube, setIsResolvingYouTube] = useState(false);
 
   if (!parseResult) {
     return null;
@@ -49,8 +51,30 @@ export function StepReview() {
   const activeTracksCount =
     parseResult.tracks.length - excludedTrackIndices.size;
 
-  const handleCreatePlaylistClick = () => {
+  const handleYouTubeExportClick = async () => {
     mediumTap();
+    setIsResolvingYouTube(true);
+    try {
+      const res = await createYouTubePlaylist();
+      if (res?.youtubeUrl) {
+        try {
+          window.open(res.youtubeUrl, "_blank");
+        } catch {
+          // Browser popup blocker handled by Step 4 launch buttons
+        }
+      }
+    } finally {
+      setIsResolvingYouTube(false);
+    }
+  };
+
+  const handleOpenSpotifyModal = () => {
+    mediumTap();
+    setIsSpotifyModalOpen(true);
+  };
+
+  const handleConfirmSpotifyCreate = () => {
+    setIsSpotifyModalOpen(false);
     if (!isAuthenticated) {
       savePendingWizardState();
       login();
@@ -158,65 +182,33 @@ export function StepReview() {
         </div>
       )}
 
-      {/* Playlist Customization Bar (Editable Title & Privacy) */}
+      {/* Playlist Customization Bar (Editable Title & Dual Quick Actions) */}
       <div className="p-4 sm:p-5 rounded-2xl bg-[#181818] border border-neutral-800/80 space-y-3">
         <div className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
           Playlist Metadata
         </div>
 
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
           <input
             type="text"
             value={playlistTitle}
             onChange={(e) => setPlaylistTitle(e.target.value)}
             placeholder="Enter playlist name..."
-            className="flex-1 h-11 px-4 rounded-xl bg-[#242424] border border-neutral-700/60 text-white placeholder:text-[#B3B3B3] text-sm font-medium focus:border-white/40 outline-none transition-all"
+            className="flex-1 h-11 px-4 rounded-xl bg-[#242424] border border-neutral-700/60 text-white placeholder:text-[#B3B3B3] text-sm font-medium focus:border-white/40 outline-none transition-all min-w-0"
           />
 
-          <div className="flex items-center gap-2.5">
-            {/* Privacy Toggle Pill (Exact h-11 height matching Create button) */}
-            <div className="h-11 p-1 rounded-xl bg-[#242424] border border-neutral-700/60 flex items-center gap-1 shrink-0">
-              <button
-                type="button"
-                onClick={() => setIsPublic(false)}
-                className={`h-full px-3.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                  !isPublic
-                    ? "bg-[#1DB954] text-black font-bold shadow"
-                    : "text-zinc-400 hover:text-white"
-                }`}
-              >
-                <Lock className="w-3.5 h-3.5" />
-                <span>Private</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsPublic(true)}
-                className={`h-full px-3.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                  isPublic
-                    ? "bg-[#1DB954] text-black font-bold shadow"
-                    : "text-zinc-400 hover:text-white"
-                }`}
-              >
-                <Globe className="w-3.5 h-3.5" />
-                <span>Public</span>
-              </button>
-            </div>
-
-            {/* Quick-Action Create Button in Top Header */}
+          <div className="flex items-center gap-2.5 shrink-0">
+            {/* Spotify Quick-Action Button */}
             <button
               type="button"
-              onClick={handleCreatePlaylistClick}
-              disabled={isGenerating || activeTracksCount === 0}
-              className="flex-1 sm:flex-initial h-11 px-4 sm:px-5 rounded-xl bg-[#1DB954] hover:bg-[#1ed760] disabled:bg-[#1DB954]/50 text-black font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-[#1DB954]/20 active:scale-[0.97] transition-all cursor-pointer disabled:cursor-not-allowed shrink-0"
-              title={
-                isAuthenticated
-                  ? `Create playlist with ${activeTracksCount} tracks`
-                  : `Connect Spotify to create playlist with ${activeTracksCount} tracks`
-              }
+              onClick={handleOpenSpotifyModal}
+              disabled={isGenerating || isResolvingYouTube || activeTracksCount === 0}
+              className="flex-1 sm:flex-initial h-11 px-3.5 sm:px-4 rounded-xl bg-[#1DB954] hover:bg-[#1ed760] disabled:bg-[#1DB954]/50 text-black font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-[#1DB954]/20 active:scale-[0.97] transition-all cursor-pointer disabled:cursor-not-allowed whitespace-nowrap"
+              title="Create Spotify playlist"
             >
               {isGenerating ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 className="w-4 h-4 animate-spin text-black" />
                   <span>Creating...</span>
                 </>
               ) : (
@@ -228,7 +220,34 @@ export function StepReview() {
                   >
                     <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.498 17.306c-.216.353-.674.467-1.027.25-2.813-1.718-6.354-2.107-10.526-1.155-.403.092-.806-.16-.898-.563-.092-.403.16-.806.563-.898 4.568-1.044 8.484-.606 11.638 1.328.353.216.467.674.25 1.027zm1.467-3.262c-.272.441-.849.582-1.29.31-3.22-1.979-8.128-2.551-11.936-1.394-.497.151-1.029-.133-1.18-.63-.151-.497.133-1.029.63-1.18 4.354-1.322 9.774-.684 13.466 1.583.441.272.582.849.31 1.291zm.126-3.41c-3.861-2.293-10.223-2.504-13.889-1.391-.592.18-1.223-.155-1.403-.747-.18-.592.155-1.223.747-1.403 4.218-1.28 11.238-1.033 15.688 1.609.533.316.707 1.009.391 1.542-.316.533-1.009.707-1.542.391z" />
                   </svg>
-                  <span>{isAuthenticated ? "Create" : "Connect"}</span>
+                  <span>Spotify</span>
+                </>
+              )}
+            </button>
+
+            {/* YouTube Quick-Action Button */}
+            <button
+              type="button"
+              onClick={handleYouTubeExportClick}
+              disabled={isResolvingYouTube || isGenerating || activeTracksCount === 0}
+              className="flex-1 sm:flex-initial h-11 px-3.5 sm:px-4 rounded-xl bg-[#FF0000] hover:bg-[#e60000] disabled:bg-[#FF0000]/50 text-white font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-[#FF0000]/20 active:scale-[0.97] transition-all cursor-pointer disabled:cursor-not-allowed whitespace-nowrap"
+              title="Export to YouTube / YouTube Music"
+            >
+              {isResolvingYouTube ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin text-white" />
+                  <span>Exporting...</span>
+                </>
+              ) : (
+                <>
+                  <svg
+                    className="w-4 h-4 fill-white shrink-0"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                  </svg>
+                  <span>YouTube</span>
                 </>
               )}
             </button>
@@ -401,13 +420,45 @@ export function StepReview() {
         </div>
 
         {/* Action Buttons Container */}
-        <div className="w-full max-w-md flex flex-col items-stretch gap-2.5">
+        <div className="w-full max-w-md flex flex-col items-stretch gap-3">
+          {/* Dedicated YouTube Export Section: Zero Login Required */}
+          <div className="flex flex-col items-center gap-1.5 w-full">
+            <button
+              type="button"
+              onClick={handleYouTubeExportClick}
+              disabled={isResolvingYouTube || isGenerating || activeTracksCount === 0}
+              className="w-full min-h-[44px] inline-flex items-center justify-center gap-3 px-8 py-3.5 sm:py-4 rounded-full bg-[#FF0000] hover:bg-[#E60000] disabled:bg-[#FF0000]/50 text-white font-extrabold text-sm sm:text-base shadow-xl shadow-[#FF0000]/25 hover:shadow-[#FF0000]/40 active:scale-[0.98] transition-all cursor-pointer disabled:cursor-not-allowed"
+            >
+              {isResolvingYouTube ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin text-white shrink-0" />
+                  <span>Resolving YouTube audio tracks...</span>
+                </>
+              ) : (
+                <>
+                  {/* Official YouTube Play Icon SVG */}
+                  <svg
+                    className="w-5 h-5 fill-white shrink-0"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                  </svg>
+                  <span>Export to YouTube / YouTube Music</span>
+                </>
+              )}
+            </button>
+            <span className="text-[11px] text-zinc-400 font-medium">
+              Zero login required • Works for all users
+            </span>
+          </div>
+
           {/* Prominent Spotify Button */}
           <button
             type="button"
-            onClick={handleCreatePlaylistClick}
-            disabled={isGenerating || activeTracksCount === 0}
-            className="w-full inline-flex items-center justify-center gap-3 px-8 py-4 rounded-full bg-[#1DB954] hover:bg-[#1ed760] disabled:bg-[#1DB954]/50 text-black font-extrabold text-base shadow-xl shadow-[#1DB954]/25 hover:shadow-[#1DB954]/40 active:scale-[0.98] transition-all cursor-pointer disabled:cursor-not-allowed"
+            onClick={handleOpenSpotifyModal}
+            disabled={isGenerating || isResolvingYouTube || activeTracksCount === 0}
+            className="w-full min-h-[44px] inline-flex items-center justify-center gap-3 px-8 py-3.5 sm:py-4 rounded-full bg-[#1DB954] hover:bg-[#1ed760] disabled:bg-[#1DB954]/50 text-black font-extrabold text-sm sm:text-base shadow-xl shadow-[#1DB954]/25 hover:shadow-[#1DB954]/40 active:scale-[0.98] transition-all cursor-pointer disabled:cursor-not-allowed"
           >
             {isGenerating ? (
               <>
@@ -437,7 +488,7 @@ export function StepReview() {
           <button
             type="button"
             onClick={handleOpenTicketStub}
-            className="w-full inline-flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-full bg-white/5 hover:bg-white/10 active:bg-white/15 border border-white/15 hover:border-white/25 text-white font-bold text-sm sm:text-base shadow-lg backdrop-blur-md active:scale-[0.98] transition-all cursor-pointer"
+            className="w-full min-h-[44px] inline-flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-full bg-white/5 hover:bg-white/10 active:bg-white/15 border border-white/15 hover:border-white/25 text-white font-bold text-sm sm:text-base shadow-lg backdrop-blur-md active:scale-[0.98] transition-all cursor-pointer"
           >
             <Ticket className="w-5 h-5 text-[#1DB954] shrink-0" />
             <span>Customize & Download Ticket Stub</span>
@@ -447,8 +498,8 @@ export function StepReview() {
         {/* Subtle helper line with calibrated bottom margin */}
         <p className="text-xs text-zinc-500 font-medium mb-5">
           {isAuthenticated
-            ? "Playlist will be saved directly to your Spotify library"
-            : "Free instant ticket stubs • Connect Spotify anytime to sync playlists"}
+            ? "Playlists will be saved directly to your music library"
+            : "Free instant ticket stubs & YouTube export • Connect Spotify anytime to sync playlists"}
         </p>
       </div>
 
@@ -488,6 +539,18 @@ export function StepReview() {
           mode={parseResult.mode}
         />
       )}
+
+      {/* Spotify Privacy Modal */}
+      <SpotifyPrivacyModal
+        isOpen={isSpotifyModalOpen}
+        onClose={() => setIsSpotifyModalOpen(false)}
+        playlistTitle={playlistTitle || `${parseResult.artistName} Live Setlist`}
+        trackCount={activeTracksCount}
+        isPublic={isPublic}
+        setIsPublic={setIsPublic}
+        onConfirm={handleConfirmSpotifyCreate}
+        isGenerating={isGenerating}
+      />
     </div>
   );
 }

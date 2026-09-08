@@ -243,8 +243,24 @@ export function StubsView() {
                   </div>
 
                   <div className="flex items-center gap-2">
+                    {/* Open in YouTube Button */}
+                    {ticket.youtubeUrl && (
+                      <a
+                        href={ticket.youtubeUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-7 h-7 rounded-full bg-[#FF0000]/15 hover:bg-[#FF0000]/30 border border-[#FF0000]/40 text-[#FF0000] flex items-center justify-center transition-colors"
+                        title="Open playlist in YouTube"
+                      >
+                        <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                          <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                        </svg>
+                      </a>
+                    )}
+
                     {/* Open in Spotify Button */}
-                    {ticket.playlistUrl && (
+                    {ticket.playlistUrl && !ticket.playlistUrl.includes("youtube.com") && (
                       <a
                         href={ticket.playlistUrl}
                         target="_blank"
@@ -313,7 +329,7 @@ export function StubsView() {
           cityName={selectedTicket.cityName}
           eventDate={selectedTicket.eventDate}
           tracks={selectedTicket.tracks}
-          playlistUrl={selectedTicket.playlistUrl}
+          playlistUrl={selectedTicket.playlistUrl || selectedTicket.youtubeUrl || ""}
           mode={selectedTicket.mode}
           initialTheme={selectedTicket.theme}
         />

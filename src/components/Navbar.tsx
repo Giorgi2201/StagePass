@@ -3,8 +3,9 @@
 import React from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useNavigation } from "@/context/NavigationContext";
-import { Ticket, LogOut, Loader2 } from "lucide-react";
+import { LogOut, Loader2 } from "lucide-react";
 import Image from "next/image";
+import { StagePassLogo } from "@/components/brand/StagePassLogo";
 
 export function Navbar() {
   const { user, isAuthenticated, isLoading, logout, login } = useAuth();
@@ -17,13 +18,9 @@ export function Navbar() {
         <button
           type="button"
           onClick={() => setActiveTab("setlists")}
-          className="flex items-center gap-3 cursor-pointer text-left outline-none group shrink-0"
+          className="flex items-center gap-2.5 cursor-pointer text-left outline-none group shrink-0"
         >
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#1DB954] to-emerald-400 p-[1.5px] flex items-center justify-center shadow-md shadow-[#1DB954]/20 shrink-0 group-hover:scale-105 transition-transform">
-            <div className="w-full h-full bg-[#121212] rounded-[10px] flex items-center justify-center">
-              <Ticket className="w-4 h-4 text-[#1DB954]" />
-            </div>
-          </div>
+          <StagePassLogo className="w-8 h-8 drop-shadow-[0_0_8px_rgba(29,185,84,0.35)] group-hover:scale-105 group-hover:drop-shadow-[0_0_12px_rgba(29,185,84,0.55)] transition-all shrink-0" />
 
           <div className="flex items-center gap-2">
             <span className="font-bold text-lg sm:text-xl tracking-tight text-white group-hover:text-[#1DB954] transition-colors">
