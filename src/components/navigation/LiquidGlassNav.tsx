@@ -103,15 +103,15 @@ export function LiquidGlassNav() {
   return (
     <nav
       aria-label="Mobile Navigation"
-      className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-40 w-[calc(100%-2rem)] max-w-sm pointer-events-auto select-none"
+      className="md:hidden fixed bottom-[max(12px,calc(env(safe-area-inset-bottom,0px)-6px))] left-1/2 -translate-x-1/2 z-40 w-[calc(100%-2.5rem)] max-w-sm pointer-events-auto select-none"
       style={{
-        marginBottom: "env(safe-area-inset-bottom, 0px)",
+        bottom: "max(12px, calc(env(safe-area-inset-bottom, 0px) - 6px))",
       }}
     >
       {/* =========================================================
-          OUTER CAPSULE BAR (Reference Picture 2)
-          Soft, smoky frosted glass appearance with deep backdrop blur
-          and muted semi-transparent dark charcoal tint
+          OUTER CAPSULE BAR (Wise-Inspired Native iOS Proportions)
+          Slim 56px height, soft smoky frosted glass appearance with
+          deep backdrop blur and muted semi-transparent charcoal tint
          ========================================================= */}
       <div
         ref={navRef}
@@ -120,7 +120,7 @@ export function LiquidGlassNav() {
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
         onTouchMove={handleTouchMove}
-        className="relative h-16 rounded-full bg-[#232724]/60 backdrop-blur-2xl border border-white/10 p-1.5 flex items-center justify-between shadow-[0_12px_40px_0_rgba(0,0,0,0.45),inset_0_1px_1px_rgba(255,255,255,0.1)] touch-none cursor-pointer"
+        className="relative h-14 rounded-full bg-[#232724]/60 backdrop-blur-2xl border border-white/10 p-[3px] flex items-center justify-between shadow-[0_12px_40px_0_rgba(0,0,0,0.45),inset_0_1px_1px_rgba(255,255,255,0.1)] touch-none cursor-pointer"
       >
         {/* Subtle Specular Top Hairline Reflection */}
         <div className="absolute top-0 left-6 right-6 h-[1px] bg-gradient-to-r from-transparent via-white/15 to-transparent pointer-events-none" />
@@ -135,7 +135,7 @@ export function LiquidGlassNav() {
               key={tab.id}
               type="button"
               onClick={() => handleTabClick(tab.id)}
-              className="relative flex-1 h-full rounded-full flex flex-col items-center justify-center gap-1 z-10 transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-white/30"
+              className="relative flex-1 h-full rounded-full flex flex-col items-center justify-center gap-0.5 z-10 transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-white/30"
             >
               {/* Active Sliding Indicator (Unified Liquid Glass Capsule) */}
               {isActive && (
@@ -150,13 +150,13 @@ export function LiquidGlassNav() {
                   className="absolute inset-0 pointer-events-none z-0"
                 >
                   {/* Physical Expanding Lens Bead:
-                      When resting: sits flush at scale 1.0 with subtle dark backing.
-                      When sliding/dragging: smoothly scales up (~132% Y, ~108% X) so its rounded
-                      top and bottom lips gently bulge 2-3px beyond the capsule track. */}
+                      When resting: sits flush inside 3px padding with subtle dark backing.
+                      When sliding/dragging: smoothly scales up (~124% Y, ~106% X) so its rounded
+                      top and bottom lips gently bulge 2.5px beyond the 56px capsule track. */}
                   <motion.div
                     animate={{
-                      scaleY: isLensActive ? 1.32 : 1.0,
-                      scaleX: isLensActive ? 1.08 : 1.0,
+                      scaleY: isLensActive ? 1.24 : 1.0,
+                      scaleX: isLensActive ? 1.06 : 1.0,
                     }}
                     transition={{
                       type: "spring",
@@ -248,7 +248,7 @@ export function LiquidGlassNav() {
                 }`}
               >
                 <Icon className="w-5 h-5 transition-transform" />
-                <span className="text-[10px] tracking-tight mt-0.5 leading-none">
+                <span className="text-[10.5px] font-medium tracking-tight mt-0.5 leading-none">
                   {tab.label}
                 </span>
               </div>

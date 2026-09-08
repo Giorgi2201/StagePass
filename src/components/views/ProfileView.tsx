@@ -108,7 +108,7 @@ export function ProfileView() {
   };
 
   return (
-    <div className="space-y-6 max-w-xl mx-auto animate-in fade-in duration-300 pb-36 md:pb-12">
+    <div className="space-y-6 max-w-xl mx-auto animate-in fade-in duration-300 pb-24 md:pb-12">
       {/* View Header */}
       <div className="pb-4 border-b border-neutral-800/80 space-y-1">
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#1DB954]/10 border border-[#1DB954]/30 text-[#1DB954] text-xs font-bold uppercase tracking-wider mb-1">

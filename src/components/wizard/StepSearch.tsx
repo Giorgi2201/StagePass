@@ -196,9 +196,8 @@ export function StepSearch() {
             type="text"
             value={artistQuery}
             onChange={handleInputChange}
-            placeholder="Search artists (e.g. Coldplay, Billie Eilish, Radiohead)..."
-            className="w-full h-13 pl-12 pr-12 rounded-xl bg-[#242424] hover:bg-[#2a2a2a] focus:bg-[#282828] border border-transparent focus:border-white/30 text-white placeholder:text-[#B3B3B3] text-sm sm:text-base outline-none transition-all shadow-inner"
-            autoFocus
+            placeholder="Search artists (e.g. Coldplay, Drake)..."
+            className="w-full h-13 pl-12 pr-10 rounded-xl bg-[#242424] hover:bg-[#2a2a2a] focus:bg-[#282828] border border-transparent focus:border-white/30 text-white placeholder:text-[#B3B3B3] text-sm sm:text-base outline-none transition-all shadow-inner truncate"
           />
           {artistQuery && (
             <button
