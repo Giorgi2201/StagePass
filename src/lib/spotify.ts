@@ -339,6 +339,51 @@ interface SpotifyArtistSearchResponse {
 }
 
 /**
+ * Fast Spotify search to resolve typos, slang, and unaccented names to
+ * their official canonical artist name (e.g. "asap ferg" -> "A$AP Ferg", "beyonce" -> "Beyoncé").
+ */
+export async function resolveSpotifyCanonicalArtist(
+  query: string
+): Promise<{ name: string; imageUrl: string | null } | null> {
+  const trimmed = query.trim();
+  if (!trimmed) return null;
+
+  const token = await getActiveSpotifyToken();
+  if (!token) return null;
+
+  try {
+    const url = `${SPOTIFY_API_BASE_URL}/search?q=${encodeURIComponent(
+      trimmed
+    )}&type=artist&limit=1`;
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/json",
+      },
+      next: { revalidate: 86400 },
+    });
+
+    if (!response.ok) return null;
+    const data = (await response.json()) as SpotifyArtistSearchResponse;
+    const artist = data.artists?.items?.[0];
+    if (!artist || !artist.name) return null;
+
+    const imageUrl =
+      artist.images?.[1]?.url || artist.images?.[0]?.url || null;
+
+    return {
+      name: artist.name,
+      imageUrl,
+    };
+  } catch (err) {
+    console.warn(`[Spotify] Failed to resolve canonical artist for "${trimmed}":`, err);
+    return null;
+  }
+}
+
+/**
  * Searches Spotify for an artist by name and extracts their medium-sized profile image
  */
 async function fetchArtistImageUrl(

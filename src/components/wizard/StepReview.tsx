@@ -15,6 +15,7 @@ import {
   AlertCircle,
   TrendingUp,
   Ticket,
+  Pencil,
 } from "lucide-react";
 import { mediumTap } from "@/lib/haptics";
 import { SpotifyPrivacyModal } from "@/components/modals/SpotifyPrivacyModal";
@@ -182,33 +183,48 @@ export function StepReview() {
         </div>
       )}
 
-      {/* Playlist Customization Bar (Editable Title & Dual Quick Actions) */}
-      <div className="p-4 sm:p-5 rounded-2xl bg-[#181818] border border-neutral-800/80 space-y-3">
-        <div className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
-          Playlist Metadata
+      {/* Playlist Customization Bar (Editable Title & Balanced Dual Quick Actions) */}
+      <div className="p-4 sm:p-5 rounded-2xl bg-[#181818] border border-neutral-800/80">
+        {/* Card Header & Label */}
+        <div className="pb-2.5">
+          <label
+            htmlFor="playlist-title-input"
+            className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-neutral-400"
+          >
+            PLAYLIST NAME
+          </label>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
-          <input
-            type="text"
-            value={playlistTitle}
-            onChange={(e) => setPlaylistTitle(e.target.value)}
-            placeholder="Enter playlist name..."
-            className="flex-1 h-11 px-4 rounded-xl bg-[#242424] border border-neutral-700/60 text-white placeholder:text-[#B3B3B3] text-sm font-medium focus:border-white/40 outline-none transition-all min-w-0"
-          />
+        {/* Input & Action Buttons: Stacked on mobile, side-by-side on desktop */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          {/* High-Affordance Playlist Title Field */}
+          <div className="relative flex-1 flex items-center group rounded-xl bg-white/[0.06] border border-white/15 hover:border-white/30 focus-within:border-white/60 focus-within:ring-1 focus-within:ring-white/20 transition-all min-w-0">
+            <input
+              id="playlist-title-input"
+              type="text"
+              value={playlistTitle}
+              onChange={(e) => setPlaylistTitle(e.target.value)}
+              placeholder="Enter playlist name..."
+              className="w-full h-12 pl-4 pr-11 py-3 bg-transparent text-white font-medium text-sm md:text-base placeholder:text-neutral-500 outline-none min-w-0"
+            />
+            <div className="absolute right-3.5 pointer-events-none text-neutral-400 group-hover:text-neutral-300 group-focus-within:text-white transition-colors">
+              <Pencil className="w-4 h-4" />
+            </div>
+          </div>
 
-          <div className="flex items-center gap-2.5 shrink-0">
+          {/* Action Buttons: 2-column grid on mobile, flex row on desktop next to the input */}
+          <div className="grid grid-cols-2 sm:flex sm:items-center gap-2.5 sm:gap-3 shrink-0">
             {/* Spotify Quick-Action Button */}
             <button
               type="button"
               onClick={handleOpenSpotifyModal}
               disabled={isGenerating || isResolvingYouTube || activeTracksCount === 0}
-              className="flex-1 sm:flex-initial h-11 px-3.5 sm:px-4 rounded-xl bg-[#1DB954] hover:bg-[#1ed760] disabled:bg-[#1DB954]/50 text-black font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-[#1DB954]/20 active:scale-[0.97] transition-all cursor-pointer disabled:cursor-not-allowed whitespace-nowrap"
+              className="w-full sm:w-auto sm:min-w-[130px] h-12 px-4 rounded-xl bg-[#1DB954] hover:bg-[#1ed760] disabled:bg-[#1DB954]/50 text-black font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-[#1DB954]/20 active:scale-[0.97] transition-all cursor-pointer disabled:cursor-not-allowed whitespace-nowrap"
               title="Create Spotify playlist"
             >
               {isGenerating ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin text-black" />
+                  <Loader2 className="w-4 h-4 animate-spin text-black shrink-0" />
                   <span>Creating...</span>
                 </>
               ) : (
@@ -230,12 +246,12 @@ export function StepReview() {
               type="button"
               onClick={handleYouTubeExportClick}
               disabled={isResolvingYouTube || isGenerating || activeTracksCount === 0}
-              className="flex-1 sm:flex-initial h-11 px-3.5 sm:px-4 rounded-xl bg-[#FF0000] hover:bg-[#e60000] disabled:bg-[#FF0000]/50 text-white font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-[#FF0000]/20 active:scale-[0.97] transition-all cursor-pointer disabled:cursor-not-allowed whitespace-nowrap"
+              className="w-full sm:w-auto sm:min-w-[130px] h-12 px-4 rounded-xl bg-[#FF0000] hover:bg-[#e60000] disabled:bg-[#FF0000]/50 text-white font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-[#FF0000]/20 active:scale-[0.97] transition-all cursor-pointer disabled:cursor-not-allowed whitespace-nowrap"
               title="Export to YouTube / YouTube Music"
             >
               {isResolvingYouTube ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin text-white" />
+                  <Loader2 className="w-4 h-4 animate-spin text-white shrink-0" />
                   <span>Exporting...</span>
                 </>
               ) : (

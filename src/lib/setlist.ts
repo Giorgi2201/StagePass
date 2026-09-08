@@ -65,6 +65,45 @@ const COLLAB_SEPARATORS =
 const TRIBUTE_REGEX =
   /\b(tribute|impersonator|cover\s*band|cover\s*brasil|experience|bootleg|orchestra|ensemble)\b/i;
 
+/**
+ * Robust Artist String Normalizer
+ * Normalizes artist names across Unicode diacritics/accents, stylistic music symbols ($, !, &),
+ * and typographical punctuation to enable exact and fuzzy matching.
+ */
+export function normalizeArtistName(name: string): string {
+  if (!name) return "";
+
+  let normalized = name.toLowerCase().trim();
+
+  // 1. Unicode Accent De-duplication (decompose accented chars like é, ö, ë, ñ, ø, ü into base + diacritic mark)
+  normalized = normalized.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+  // Also handle special latin/nordic characters not split by NFD (like ø, æ, ß)
+  normalized = normalized
+    .replace(/ø/g, "o")
+    .replace(/æ/g, "ae")
+    .replace(/œ/g, "oe")
+    .replace(/ß/g, "ss");
+
+  // 2. Stylistic Symbol Substitution
+  // Replace $ with s (e.g. A$AP -> asap, Ke$ha -> kesha, Joey Bada$$ -> joey badass)
+  normalized = normalized.replace(/\$/g, "s");
+
+  // Replace ! with i when between letters or preceded by P (e.g. P!nk -> pink), otherwise strip (Panic! At The Disco -> panic at the disco)
+  normalized = normalized.replace(/p!nk/gi, "pink");
+  normalized = normalized.replace(/([a-z])!([a-z])/gi, "$1i$2");
+  normalized = normalized.replace(/!/g, "");
+
+  // Replace & or + with and
+  normalized = normalized.replace(/[&+]/g, "and");
+
+  // 3. Alphanumeric Cleaning
+  // Lowercase and strip non-alphanumeric punctuation
+  normalized = normalized.replace(/[^a-z0-9]/g, "");
+
+  return normalized;
+}
+
 interface ArtistRelevanceScore {
   tier: 1 | 2 | 3 | 4 | 5;
   score: number;
@@ -73,17 +112,21 @@ interface ArtistRelevanceScore {
 
 /**
  * Multi-Tiered Relevance Scoring Algorithm for Setlist.fm Artists:
- * - Tier 1: Exact Name / Direct Alias in Disambiguation (e.g. "Ye" formerly Kanye West)
- * - Tier 2: Primary Solo / Band Match (starts with/contains query, no collaborative keywords)
+ * - Tier 1: Exact Normalized Match / Direct Alias in Disambiguation (e.g. "A$AP Ferg" === "asap ferg", "Beyoncé" === "beyonce")
+ * - Tier 2: Primary Solo / Band Match (starts with / contains normalized query, no collaborative keywords)
  * - Tier 3: Established Side Projects & Duos (e.g. "¥$", "Silk Sonic", "The Postal Service")
  * - Tier 4: Collaborative Noise & One-off Guest Features ("Lil Wayne feat. Kanye West")
  * - Tier 5: Tribute & Cover Bands (demoted below all original cataloged artists)
  */
-function scoreArtistRelevance(
+export function scoreArtistRelevance(
   name: string,
   disambiguation: string | undefined,
   query: string
 ): ArtistRelevanceScore {
+  const normQuery = normalizeArtistName(query);
+  const normName = normalizeArtistName(name || "");
+  const normDisambiguation = normalizeArtistName(disambiguation || "");
+
   const lowerQuery = query.toLowerCase().trim();
   const lowerName = (name || "").toLowerCase().trim();
   const lowerDisambiguation = (disambiguation || "").toLowerCase().trim();
@@ -96,27 +139,31 @@ function scoreArtistRelevance(
   const nameHasFeature = FEATURE_MARKERS.test(lowerName);
   const nameHasCollab = COLLAB_SEPARATORS.test(lowerName);
 
-  // 1. Tier 1: Exact / Alias Match
-  if (lowerName === lowerQuery) {
-    return { tier: 1, score: 100, reason: "exact_name" };
+  // 1. Tier 1: Exact Normalized Match (e.g. "A$AP Ferg" === "asap ferg", "Beyoncé" === "beyonce")
+  if (normName && normQuery && normName === normQuery) {
+    return { tier: 1, score: 100, reason: "exact_normalized_name" };
   }
 
-  if (lowerName === `the ${lowerQuery}` || `the ${lowerName}` === lowerQuery) {
+  // Exact with 'the' prefix (e.g. "The 1975" vs "1975")
+  if (
+    normName &&
+    normQuery &&
+    (normName === `the${normQuery}` || `the${normName}` === normQuery)
+  ) {
     return { tier: 1, score: 98, reason: "exact_the_prefix" };
   }
 
-  // Direct alias in disambiguation (e.g. "Ye" -> "formerly Kanye West")
+  // Direct alias in disambiguation (e.g. "FERG" -> "fka A$AP Ferg", "Ye" -> "formerly Kanye West")
   const isDirectAlias =
     !isTribute &&
     !nameHasCollab &&
-    (lowerDisambiguation === lowerQuery ||
-      lowerDisambiguation === `formerly ${lowerQuery}` ||
-      lowerDisambiguation.includes(`formerly ${lowerQuery}`) ||
-      lowerDisambiguation.includes(`formerly known as ${lowerQuery}`) ||
-      lowerDisambiguation.includes(`aka ${lowerQuery}`) ||
-      lowerDisambiguation.includes(`a.k.a. ${lowerQuery}`) ||
-      lowerDisambiguation.startsWith(`formerly ${lowerQuery}`) ||
-      lowerDisambiguation.startsWith(`aka ${lowerQuery}`));
+    (normDisambiguation === normQuery ||
+      normDisambiguation.includes(`formerly${normQuery}`) ||
+      normDisambiguation.includes(`fka${normQuery}`) ||
+      normDisambiguation.includes(`aka${normQuery}`) ||
+      normDisambiguation.includes(normQuery) ||
+      lowerDisambiguation.includes(`fka ${lowerQuery}`) ||
+      lowerDisambiguation.includes(`formerly ${lowerQuery}`));
 
   if (isDirectAlias) {
     return { tier: 1, score: 95, reason: "alias_disambiguation" };
@@ -128,11 +175,9 @@ function scoreArtistRelevance(
   }
 
   // Tier 3: Established Side Projects / Duos with distinct project name
-  // e.g. "¥$" (disambiguation: "Ye & Ty Dolla $ign"), "The Postal Service", "Silk Sonic"
-  // where artist name has no collab separators, but disambiguation connects to query
   if (
     !nameHasCollab &&
-    (lowerDisambiguation.includes(lowerQuery) ||
+    (normDisambiguation.includes(normQuery) ||
       (lowerQuery.includes("kanye") && lowerDisambiguation.includes("ye")) ||
       (lowerQuery.includes("ye") && lowerDisambiguation.includes("kanye")))
   ) {
@@ -149,20 +194,20 @@ function scoreArtistRelevance(
     return { tier: 4, score: 20, reason: "collaborative_noise" };
   }
 
-  // Tier 2: Primary Solo / Band Match (clean standalone artist)
-  if (!nameHasCollab) {
-    if (lowerName.startsWith(lowerQuery)) {
-      return { tier: 2, score: 85, reason: "clean_starts_with" };
+  // Tier 2: Primary Solo / Band Match (clean standalone artist with normalized prefix / substring)
+  if (!nameHasCollab && normQuery && normName) {
+    if (normName.startsWith(normQuery)) {
+      return { tier: 2, score: 85, reason: "clean_starts_with_normalized" };
     }
-    if (lowerName.includes(lowerQuery)) {
-      return { tier: 2, score: 75, reason: "clean_contains" };
+    if (normName.includes(normQuery)) {
+      return { tier: 2, score: 75, reason: "clean_contains_normalized" };
     }
   }
 
   // If query DID have collab keywords and name matches
   if (
     queryHasCollab &&
-    (lowerName.includes(lowerQuery) || lowerDisambiguation.includes(lowerQuery))
+    (normName.includes(normQuery) || normDisambiguation.includes(normQuery))
   ) {
     return { tier: 3, score: 60, reason: "requested_collaboration" };
   }
@@ -176,7 +221,8 @@ function scoreArtistRelevance(
  */
 export async function searchArtists(
   query: string,
-  maxResults = 6
+  maxResults = 6,
+  canonicalName?: string
 ): Promise<NormalizedArtist[]> {
   const trimmed = query.trim();
   if (!trimmed) return [];
@@ -194,15 +240,36 @@ export async function searchArtists(
     : [data.artist];
 
   const cappedMax = Math.min(Math.max(maxResults, 1), 8);
+  const targetQuery = canonicalName || trimmed;
 
-  const scored = artists.map((a) => ({
-    artist: {
-      id: a.mbid,
-      name: a.name,
-      disambiguation: a.disambiguation,
-    },
-    ...scoreArtistRelevance(a.name, a.disambiguation, trimmed),
-  }));
+  const scored = artists.map((a) => {
+    const relevance = scoreArtistRelevance(a.name, a.disambiguation, targetQuery);
+    const normDis = normalizeArtistName(a.disambiguation || "");
+    const normTarget = normalizeArtistName(targetQuery);
+
+    // If candidate has an alias matching canonical target (e.g. FERG fka A$AP Ferg),
+    // display the canonical name or extracted alias for seamless user experience
+    let displayName = a.name;
+    if (canonicalName && (normDis.includes(normTarget) || relevance.tier === 1)) {
+      displayName = canonicalName;
+    } else if (normDis.includes(normTarget)) {
+      const aliasMatch = a.disambiguation?.match(
+        /(?:fka|formerly known as|formerly|aka)\s+([^\(\)]+)/i
+      );
+      if (aliasMatch && aliasMatch[1]) {
+        displayName = aliasMatch[1].trim();
+      }
+    }
+
+    return {
+      artist: {
+        id: a.mbid,
+        name: displayName,
+        disambiguation: a.disambiguation,
+      },
+      ...relevance,
+    };
+  });
 
   // Sort descending by score
   scored.sort((a, b) => b.score - a.score);
