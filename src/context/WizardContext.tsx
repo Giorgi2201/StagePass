@@ -14,7 +14,7 @@ import type {
 import type { CreatePlaylistResponse } from "@/types/spotify";
 
 export type WizardStep = "search" | "shows" | "review" | "success";
-export type WizardMode = "rehearsal" | "memory";
+export type WizardMode = "rehearsal" | "memory" | "essential";
 
 interface WizardContextType {
   step: WizardStep;
@@ -37,6 +37,7 @@ interface WizardContextType {
   selectArtist: (artist: NormalizedArtist) => void;
   selectShow: (show: NormalizedShow) => Promise<void>;
   generateRehearsalSetlist: () => Promise<void>;
+  generateEssentialHits: () => Promise<void>;
   toggleTrack: (index: number) => void;
   setPlaylistTitle: (title: string) => void;
   setIsPublic: (isPublic: boolean) => void;
@@ -166,6 +167,47 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
     }
   }, [selectedArtist]);
 
+  const generateEssentialHits = useCallback(async () => {
+    if (!selectedArtist) return;
+
+    setIsLoadingParse(true);
+    setErrorMessage(null);
+
+    try {
+      const response = await fetch(
+        `/api/spotify/artist-top-tracks?artistName=${encodeURIComponent(
+          selectedArtist.name
+        )}`
+      );
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(
+          errData.error || "Failed to curate essential hits collection"
+        );
+      }
+
+      const data: SetlistParseResult = await response.json();
+      setParseResult(data);
+      setModeState("essential");
+      setExcludedTrackIndices(new Set());
+
+      // Pre-fill editable title: e.g. "[Artist] • Essential Hits & Fan Favorites"
+      const defaultTitle = `${data.artistName} • Essential Hits & Fan Favorites`;
+      setPlaylistTitle(defaultTitle);
+      setStep("review");
+    } catch (err) {
+      console.error("Error generating essential hits:", err);
+      setErrorMessage(
+        err instanceof Error
+          ? err.message
+          : "Failed to generate artist's essential hits"
+      );
+    } finally {
+      setIsLoadingParse(false);
+    }
+  }, [selectedArtist]);
+
   const toggleTrack = useCallback((index: number) => {
     setExcludedTrackIndices((prev) => {
       const next = new Set(prev);
@@ -285,6 +327,7 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
         selectArtist,
         selectShow,
         generateRehearsalSetlist,
+        generateEssentialHits,
         toggleTrack,
         setPlaylistTitle,
         setIsPublic,

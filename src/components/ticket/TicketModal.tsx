@@ -33,6 +33,7 @@ export interface TicketModalProps {
   eventDate?: string;
   tracks?: NormalizedTrack[];
   playlistUrl?: string;
+  mode?: "memory" | "rehearsal" | "essential";
 }
 
 const THEMES: { id: TicketTheme; label: string; dotColor: string }[] = [
@@ -51,6 +52,7 @@ export function TicketModal({
   countryName,
   eventDate,
   tracks = [],
+  mode,
 }: TicketModalProps) {
   const [theme, setTheme] = useState<TicketTheme>("spotify");
   const [section, setSection] = useState("GA");
@@ -283,6 +285,7 @@ export function TicketModal({
                   row={row}
                   seat={seat}
                   theme={theme}
+                  mode={mode}
                 />
               </div>
             </div>

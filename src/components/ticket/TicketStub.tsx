@@ -19,6 +19,7 @@ export interface TicketStubProps {
   seat?: string;
   theme?: TicketTheme;
   ticketNumber?: string;
+  mode?: "memory" | "rehearsal" | "essential";
 }
 
 // Generates an authentic alternating vector barcode SVG pattern
@@ -77,19 +78,34 @@ export const TicketStub = forwardRef<HTMLDivElement, TicketStubProps>(
     {
       artistName,
       tourName,
-      venueName = "Main Stage Arena",
-      cityName = "Global Tour",
+      venueName,
+      cityName,
       countryName,
-      eventDate = "LIVE 2026",
+      eventDate,
       tracks = [],
       section = "GA",
       row = "1",
       seat = "042",
       theme = "spotify",
       ticketNumber,
+      mode,
     },
     ref
   ) => {
+    const isEssential = mode === "essential";
+    const effectiveVenueName = isEssential
+      ? (venueName && venueName !== "Main Stage Arena" ? venueName : "STUDIO DISCOGRAPHY")
+      : (venueName || "Main Stage Arena");
+    const effectiveCityName = isEssential
+      ? (cityName && cityName !== "Global Tour" ? cityName : "GLOBAL ESSENTIALS")
+      : (cityName || "Global Tour");
+    const effectiveTourName = isEssential
+      ? (tourName || "Essential Hits & Fan Favorites")
+      : tourName;
+    const effectiveEventDate = isEssential
+      ? (eventDate && eventDate !== "LIVE 2026" ? eventDate : "STUDIO 2026")
+      : (eventDate || "LIVE 2026");
+
     // Generate deterministic ticket number if not provided
     const serializedCode =
       ticketNumber ||
@@ -99,7 +115,7 @@ export const TicketStub = forwardRef<HTMLDivElement, TicketStubProps>(
 
     // Format date string parts
     const dateParts = (() => {
-      const parts = eventDate.split("-");
+      const parts = effectiveEventDate.split("-");
       if (parts.length === 3) {
         const day = parts[0];
         const monthNum = parseInt(parts[1], 10);
@@ -115,11 +131,19 @@ export const TicketStub = forwardRef<HTMLDivElement, TicketStubProps>(
           full: `${monthNames[monthNum - 1] || ""} ${day}, ${year}`,
         };
       }
+      if (isEssential) {
+        return {
+          month: "STUDIO",
+          day: "HITS",
+          year: "2026",
+          full: "DEFINITIVE COLLECTION",
+        };
+      }
       return {
         month: "LIVE",
         day: "PASS",
-        year: eventDate,
-        full: eventDate,
+        year: effectiveEventDate,
+        full: effectiveEventDate,
       };
     })();
 
@@ -214,7 +238,7 @@ export const TicketStub = forwardRef<HTMLDivElement, TicketStubProps>(
                 ADMIT ONE
               </div>
               <div className={`text-[10px] ${t.secondaryText} truncate`}>
-                {venueName}
+                {effectiveVenueName}
               </div>
             </div>
           </div>
@@ -245,7 +269,7 @@ export const TicketStub = forwardRef<HTMLDivElement, TicketStubProps>(
             <div
               className={`text-[8px] uppercase tracking-wider font-semibold text-center py-1 rounded bg-black/30 border border-white/5 ${t.secondaryText}`}
             >
-              ★ OFFICIAL SOUVENIR ★
+              {isEssential ? "★ DEFINITIVE EDITION ★" : "★ OFFICIAL SOUVENIR ★"}
             </div>
           </div>
         </div>
@@ -280,13 +304,13 @@ export const TicketStub = forwardRef<HTMLDivElement, TicketStubProps>(
                   className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide border ${t.badgeBg}`}
                 >
                   <Sparkles className="w-2.5 h-2.5" />
-                  <span>CONCERT PASSPORT</span>
+                  <span>{isEssential ? "DEFINITIVE COLLECTION" : "CONCERT PASSPORT"}</span>
                 </span>
-                {tourName && (
+                {effectiveTourName && (
                   <span
                     className={`text-[11px] font-semibold truncate max-w-[200px] ${t.secondaryText}`}
                   >
-                    • {tourName}
+                    • {effectiveTourName}
                   </span>
                 )}
               </div>
@@ -294,8 +318,8 @@ export const TicketStub = forwardRef<HTMLDivElement, TicketStubProps>(
               <span
                 className={`text-[11px] font-bold tracking-tight uppercase ${t.accentText}`}
               >
-                {cityName}
-                {countryName ? `, ${countryName}` : ""}
+                {effectiveCityName}
+                {countryName && !isEssential ? `, ${countryName}` : ""}
               </span>
             </div>
 
@@ -312,7 +336,7 @@ export const TicketStub = forwardRef<HTMLDivElement, TicketStubProps>(
 
             {/* Venue & Time Stamp */}
             <div className="flex items-center gap-2 text-xs font-semibold">
-              <span className="truncate">{venueName}</span>
+              <span className="truncate">{effectiveVenueName}</span>
               <span className={t.mutedText}>•</span>
               <span className={t.secondaryText}>{dateParts.full}</span>
             </div>
@@ -346,7 +370,7 @@ export const TicketStub = forwardRef<HTMLDivElement, TicketStubProps>(
                 ENTRY
               </div>
               <div className={`text-xs font-black truncate ${t.accentText}`}>
-                GATE A
+                {isEssential ? "STUDIO" : "GATE A"}
               </div>
             </div>
           </div>
@@ -357,7 +381,7 @@ export const TicketStub = forwardRef<HTMLDivElement, TicketStubProps>(
               <div className="flex items-center justify-between pb-1 mb-1 border-b border-white/5">
                 <div className={`text-[9px] font-extrabold uppercase tracking-wider flex items-center gap-1 ${t.accentText}`}>
                   <Music2 className="w-2.5 h-2.5" />
-                  <span>SETLIST SELECTIONS</span>
+                  <span>{isEssential ? "ESSENTIAL HITS SELECTION" : "SETLIST SELECTIONS"}</span>
                 </div>
                 {extraTracksCount > 0 && (
                   <span className={`text-[9px] font-semibold ${t.secondaryText}`}>
@@ -408,7 +432,9 @@ export const TicketStub = forwardRef<HTMLDivElement, TicketStubProps>(
                 <span>Spotify Playlist Generated</span>
               </div>
               <div className={`text-[9px] font-medium ${t.secondaryText}`}>
-                StagePass Digital Stub • Verified Setlist
+                {isEssential
+                  ? "StagePass Digital Stub • Studio Anthology"
+                  : "StagePass Digital Stub • Verified Setlist"}
               </div>
             </div>
           </div>

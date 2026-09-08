@@ -215,7 +215,9 @@ export function StepSuccess() {
               Create Your Digital Ticket Stub
             </h2>
             <p className="text-xs text-[#B3B3B3] leading-relaxed">
-              Generate a retro concert ticket stub featuring {selectedArtist?.name || parseResult?.artistName || "your artist"}&apos;s verified setlist. Customize themes, section/seat vanity info, and export high-res PNGs to Instagram Stories or your photos.
+              {parseResult?.mode === "essential"
+                ? `Generate a retro collector stub featuring ${selectedArtist?.name || parseResult?.artistName || "your artist"}'s essential hits collection. Customize themes, section/seat vanity info, and export high-res PNGs to Instagram Stories or your photos.`
+                : `Generate a retro concert ticket stub featuring ${selectedArtist?.name || parseResult?.artistName || "your artist"}'s verified setlist. Customize themes, section/seat vanity info, and export high-res PNGs to Instagram Stories or your photos.`}
             </p>
           </div>
 
@@ -250,13 +252,30 @@ export function StepSuccess() {
         isOpen={isTicketModalOpen}
         onClose={() => setIsTicketModalOpen(false)}
         artistName={selectedArtist?.name || parseResult?.artistName || "Concert Artist"}
-        tourName={parseResult?.tourName || selectedShow?.tourName}
-        venueName={selectedShow?.venueName || parseResult?.venueInfo || "Main Stage Arena"}
-        cityName={selectedShow?.cityName}
-        countryName={selectedShow?.countryName}
-        eventDate={selectedShow?.eventDate || "LIVE 2026"}
+        tourName={
+          parseResult?.tourName ||
+          selectedShow?.tourName ||
+          (parseResult?.mode === "essential" ? "Essential Hits & Fan Favorites" : undefined)
+        }
+        venueName={
+          parseResult?.mode === "essential"
+            ? "STUDIO DISCOGRAPHY"
+            : selectedShow?.venueName || parseResult?.venueInfo || "Main Stage Arena"
+        }
+        cityName={
+          parseResult?.mode === "essential"
+            ? "GLOBAL ESSENTIALS"
+            : selectedShow?.cityName
+        }
+        countryName={parseResult?.mode === "essential" ? undefined : selectedShow?.countryName}
+        eventDate={
+          parseResult?.mode === "essential"
+            ? "STUDIO 2026"
+            : selectedShow?.eventDate || "LIVE 2026"
+        }
         tracks={parseResult?.tracks || []}
         playlistUrl={creationResult.playlistUrl}
+        mode={parseResult?.mode}
       />
     </div>
   );

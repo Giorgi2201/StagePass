@@ -1,20 +1,76 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import Image from "next/image";
 import { useWizard } from "@/context/WizardContext";
 import type { NormalizedArtist } from "@/types/setlist";
 import { Search, X, Music, Disc3, Mic2, Sparkles, History } from "lucide-react";
 import { lightTap } from "@/lib/haptics";
 
-// Popular artists for quick zero-state discovery with verified MusicBrainz UUIDs
+// Popular artists for quick zero-state discovery with verified MusicBrainz UUIDs and official Spotify avatars
 const SUGGESTED_ARTISTS: NormalizedArtist[] = [
-  { id: "381086ea-f511-4aba-bdf9-71c753dc5077", name: "Kendrick Lamar", disambiguation: "American rapper & songwriter" },
-  { id: "20244d07-534f-4eff-b4d4-930878889970", name: "Taylor Swift", disambiguation: "American pop / country artist" },
-  { id: "cc197bad-dc9c-440d-a5b5-d52ba2e14234", name: "Coldplay", disambiguation: "British rock band" },
-  { id: "a74b1b7f-71a5-4011-9441-d0b5e4122711", name: "Radiohead", disambiguation: "English alternative rock band" },
-  { id: "b10bbbfc-cf9e-42e0-be17-e2c3e1d2600d", name: "The Beatles", disambiguation: "legendary rock band" },
-  { id: "67f66c07-6e61-4026-ade5-7e782fad3a5d", name: "Foo Fighters", disambiguation: "American rock band" },
+  {
+    id: "381086ea-f511-4aba-bdf9-71c753dc5077",
+    name: "Kendrick Lamar",
+    disambiguation: "American rapper & songwriter",
+    imageUrl: "https://i.scdn.co/image/ab6761610000517439ba6dcd4355c03de0b50918",
+  },
+  {
+    id: "20244d07-534f-4eff-b4d4-930878889970",
+    name: "Taylor Swift",
+    disambiguation: "American pop / country artist",
+    imageUrl: "https://i.scdn.co/image/ab67616100005174e2e8e7ff002a4afda1c7147e",
+  },
+  {
+    id: "cc197bad-dc9c-440d-a5b5-d52ba2e14234",
+    name: "Coldplay",
+    disambiguation: "British rock band",
+    imageUrl: "https://i.scdn.co/image/ab676161000051741ba8fc5f5c73e7e9313cc6eb",
+  },
+  {
+    id: "a74b1b7f-71a5-4011-9441-d0b5e4122711",
+    name: "Radiohead",
+    disambiguation: "English alternative rock band",
+    imageUrl: "https://i.scdn.co/image/ab67616100005174959527d2fabc9c64287e57b9",
+  },
+  {
+    id: "b10bbbfc-cf9e-42e0-be17-e2c3e1d2600d",
+    name: "The Beatles",
+    disambiguation: "legendary rock band",
+    imageUrl: "https://i.scdn.co/image/ab67616100005174119b61b35985e3b957c5ecb7",
+  },
+  {
+    id: "67f66c07-6e61-4026-ade5-7e782fad3a5d",
+    name: "Foo Fighters",
+    disambiguation: "American rock band",
+    imageUrl: "https://i.scdn.co/image/ab676161000051741db35bc9c01d2b1c151e44ce",
+  },
 ];
+
+function ArtistAvatar({ artist }: { artist: NormalizedArtist }) {
+  const [hasError, setHasError] = useState(false);
+
+  if (artist.imageUrl && !hasError) {
+    return (
+      <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full overflow-hidden shrink-0 ring-1 ring-white/10 shadow-sm relative bg-[#242424]">
+        <Image
+          src={artist.imageUrl}
+          alt={artist.name}
+          width={48}
+          height={48}
+          className="w-full h-full object-cover rounded-full transition-transform duration-300 group-hover:scale-105"
+          onError={() => setHasError(true)}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-gradient-to-tr from-neutral-800 via-neutral-700 to-neutral-800 group-hover:from-purple-900 group-hover:to-pink-900 flex items-center justify-center shrink-0 shadow ring-1 ring-white/10 transition-colors">
+      <Mic2 className="w-5 h-5 text-zinc-300 group-hover:text-white transition-colors" />
+    </div>
+  );
+}
 
 export function StepSearch() {
   const { mode, setMode, artistQuery, setArtistQuery, selectArtist } = useWizard();
@@ -226,10 +282,8 @@ export function StepSearch() {
                 }}
                 className="group relative flex items-center gap-3.5 p-3 rounded-lg bg-[#181818] hover:bg-[#242424] active:scale-[0.98] transition-all text-left border border-neutral-800/80 hover:border-[#1DB954]/50 shadow-md cursor-pointer"
               >
-                {/* Circular Avatar Icon */}
-                <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-neutral-800 via-neutral-700 to-neutral-800 group-hover:from-purple-900 group-hover:to-pink-900 flex items-center justify-center shrink-0 shadow transition-colors">
-                  <Mic2 className="w-5 h-5 text-zinc-300 group-hover:text-white transition-colors" />
-                </div>
+                {/* Circular Avatar / Image */}
+                <ArtistAvatar artist={artist} />
 
                 {/* Text Meta */}
                 <div className="flex-1 min-w-0 pr-2">

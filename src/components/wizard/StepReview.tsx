@@ -58,8 +58,18 @@ export function StepReview() {
               <span className="text-xs font-semibold uppercase tracking-wider text-[#1DB954]">
                 Step 3 of 4: Review Setlist
               </span>
-              <span className="px-2 py-0.5 rounded-full bg-neutral-800 text-[10px] text-zinc-300 font-medium">
-                {mode === "rehearsal" ? "Rehearsal Mode" : "Memory Mode"}
+              <span
+                className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold ${
+                  parseResult.mode === "essential"
+                    ? "bg-[#1DB954]/20 border border-[#1DB954]/40 text-[#1DB954]"
+                    : "bg-neutral-800 text-zinc-300"
+                }`}
+              >
+                {parseResult.mode === "essential"
+                  ? "Essential Hits Collection"
+                  : mode === "rehearsal"
+                  ? "Rehearsal Mode"
+                  : "Memory Mode"}
               </span>
             </div>
             <h1 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight leading-tight">
@@ -111,7 +121,7 @@ export function StepReview() {
               onClick={() => setIsPublic(false)}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
                 !isPublic
-                  ? "bg-[#282828] text-white shadow"
+                  ? "bg-[#1DB954] text-black font-bold shadow"
                   : "text-zinc-400 hover:text-white"
               }`}
             >
@@ -140,7 +150,13 @@ export function StepReview() {
         <div className="grid grid-cols-12 gap-2 px-4 py-3 border-b border-neutral-800/80 text-[11px] font-bold uppercase tracking-wider text-[#B3B3B3]">
           <div className="col-span-1 text-center">#</div>
           <div className="col-span-7 sm:col-span-6">Title</div>
-          <div className="hidden sm:block sm:col-span-4">Type / Details</div>
+          <div className="hidden sm:block sm:col-span-4">
+            {parseResult.mode === "essential"
+              ? "Popularity"
+              : mode === "rehearsal"
+              ? "Likelihood"
+              : "Set / Encore"}
+          </div>
           <div className="col-span-4 sm:col-span-1 text-right sm:text-center">
             Include
           </div>
@@ -165,60 +181,93 @@ export function StepReview() {
                   {index + 1}
                 </div>
 
-                {/* Song Title & Mobile Badges */}
+                {/* Song Title & Tags */}
                 <div className="col-span-7 sm:col-span-6 min-w-0 pr-2">
-                  <div
-                    className={`font-bold truncate ${
-                      isExcluded ? "line-through text-zinc-400" : "text-white"
-                    }`}
-                  >
-                    {track.name}
-                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span
+                      className={`font-bold leading-snug break-words ${
+                        isExcluded ? "line-through text-zinc-400" : "text-white"
+                      }`}
+                    >
+                      {track.name}
+                    </span>
 
-                  {/* Mobile-only tags */}
-                  <div className="flex flex-wrap items-center gap-1.5 mt-1 sm:hidden">
-                    {track.isEncore && (
-                      <span className="px-1.5 py-0.2 rounded bg-emerald-950/80 border border-emerald-700/50 text-[10px] font-semibold text-emerald-400">
-                        Encore
-                      </span>
-                    )}
                     {track.isCover && (
-                      <span className="px-1.5 py-0.2 rounded bg-purple-950/80 border border-purple-800/50 text-[10px] font-medium text-purple-300">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-950/80 border border-purple-800/50 text-[10px] font-medium text-purple-300 shrink-0">
+                        <Music2 className="w-2.5 h-2.5" />
                         Cover: {track.originalArtist || "Cover"}
                       </span>
                     )}
-                    {mode === "rehearsal" && track.confidenceScore && (
-                      <span className="px-1.5 py-0.2 rounded bg-neutral-800 text-[10px] font-medium text-[#1DB954]">
-                        {track.confidenceScore}% likely
+
+                    {mode === "rehearsal" && track.isEncore && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-950/80 border border-emerald-700/50 text-[10px] font-semibold text-emerald-400 shrink-0">
+                        <Sparkles className="w-2.5 h-2.5" />
+                        Encore
+                      </span>
+                    )}
+
+                    {mode === "memory" && track.isEncore && (
+                      <span className="inline-flex sm:hidden items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-950/80 border border-emerald-700/50 text-[10px] font-semibold text-emerald-400 shrink-0">
+                        <Sparkles className="w-2.5 h-2.5" />
+                        Encore
                       </span>
                     )}
                   </div>
+
+                  {track.info && (
+                    <div className="text-[11px] text-zinc-500 italic mt-0.5 truncate">
+                      {track.info}
+                    </div>
+                  )}
+
+                  {/* Mobile-only metric badge since column is hidden on mobile */}
+                  {parseResult.mode === "essential" && track.confidenceScore !== undefined && (
+                    <div className="mt-1 sm:hidden">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#1DB954]/10 border border-[#1DB954]/30 text-[10px] font-semibold text-[#1DB954]">
+                        <TrendingUp className="w-2.5 h-2.5" />
+                        {track.confidenceScore}% popular
+                      </span>
+                    </div>
+                  )}
+
+                  {mode === "rehearsal" && parseResult.mode !== "essential" && track.confidenceScore !== undefined && (
+                    <div className="mt-1 sm:hidden">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-neutral-900 border border-neutral-800 text-[10px] font-semibold text-[#1DB954]">
+                        <TrendingUp className="w-2.5 h-2.5" />
+                        {track.confidenceScore}% likely
+                      </span>
+                    </div>
+                  )}
                 </div>
 
-                {/* Desktop Badges & Details */}
-                <div className="hidden sm:flex sm:col-span-4 items-center gap-2 flex-wrap">
-                  {track.isEncore && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-950/80 border border-emerald-700/50 text-[10px] font-semibold text-emerald-400">
-                      <Sparkles className="w-2.5 h-2.5" />
-                      Encore
-                    </span>
-                  )}
-                  {track.isCover && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-950/80 border border-purple-800/50 text-[10px] font-medium text-purple-300">
-                      <Music2 className="w-2.5 h-2.5" />
-                      Cover: {track.originalArtist || "Cover"}
-                    </span>
-                  )}
-                  {mode === "rehearsal" && track.confidenceScore && (
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-neutral-900 border border-neutral-800 text-[10px] font-semibold text-[#1DB954]">
-                      <TrendingUp className="w-2.5 h-2.5" />
-                      {track.confidenceScore}% likely
-                    </span>
-                  )}
-                  {track.info && (
-                    <span className="text-[11px] text-zinc-500 italic truncate max-w-[140px]">
-                      {track.info}
-                    </span>
+                {/* Likelihood / Details / Popularity Column */}
+                <div className="hidden sm:flex sm:col-span-4 items-center">
+                  {parseResult.mode === "essential" ? (
+                    track.confidenceScore !== undefined && (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#1DB954]/10 border border-[#1DB954]/30 text-[10px] font-semibold text-[#1DB954]">
+                        <TrendingUp className="w-2.5 h-2.5" />
+                        {track.confidenceScore}% popular
+                      </span>
+                    )
+                  ) : mode === "rehearsal" ? (
+                    track.confidenceScore !== undefined && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-neutral-900 border border-neutral-800 text-[10px] font-semibold text-[#1DB954]">
+                        <TrendingUp className="w-2.5 h-2.5" />
+                        {track.confidenceScore}% likely
+                      </span>
+                    )
+                  ) : (
+                    // Memory Mode: Set / Encore
+                    track.isEncore ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-950/80 border border-emerald-700/50 text-[10px] font-semibold text-emerald-400">
+                        <Sparkles className="w-2.5 h-2.5" />
+                        Encore
+                      </span>
+                    ) : track.setNumber ? (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-neutral-900 border border-neutral-800 text-[10px] font-medium text-zinc-400">
+                        Set {track.setNumber}
+                      </span>
+                    ) : null
                   )}
                 </div>
 

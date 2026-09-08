@@ -96,6 +96,7 @@ export interface NormalizedArtist {
   id: string; // MusicBrainz ID (mbid)
   name: string;
   disambiguation?: string;
+  imageUrl?: string | null;
 }
 
 export interface NormalizedShow {
@@ -120,7 +121,7 @@ export interface NormalizedTrack {
 }
 
 export interface SetlistParseResult {
-  mode: "memory" | "rehearsal";
+  mode: "memory" | "rehearsal" | "essential";
   artistName: string;
   tourName?: string;
   venueInfo?: string;

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { searchArtists } from "@/lib/setlist";
+import { enrichArtistsWithSpotifyImages } from "@/lib/spotify";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -17,8 +18,10 @@ export async function GET(request: Request) {
     const limit = limitParam
       ? Math.min(Math.max(parseInt(limitParam, 10) || 6, 1), 8)
       : 6;
-    const artists = await searchArtists(q, limit);
-    return NextResponse.json(artists, {
+    const rawArtists = await searchArtists(q, limit);
+    const enrichedArtists = await enrichArtistsWithSpotifyImages(rawArtists);
+
+    return NextResponse.json(enrichedArtists, {
       status: 200,
       headers: {
         "Cache-Control":
