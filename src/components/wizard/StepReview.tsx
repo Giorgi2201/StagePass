@@ -371,7 +371,7 @@ export function StepReview() {
         </button>
 
         {/* Subtle helper line */}
-        <p className="text-xs text-zinc-500 font-medium">
+        <p className="text-xs text-zinc-500 font-medium mb-5">
           Playlist will be saved directly to your Spotify library
         </p>
       </div>

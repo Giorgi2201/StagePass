@@ -30,7 +30,7 @@ export default function Home() {
       <div className="flex-1 flex flex-col relative bg-gradient-to-b from-[#181818] via-[#121212] to-[#121212]">
         {/* Inline Document Skeleton */}
         {isLoading ? (
-          <main className="w-full max-w-5xl mx-auto px-3 sm:px-6 py-4 sm:py-8 pb-20 md:pb-12 flex-1 flex flex-col relative z-10">
+          <main className="w-full max-w-5xl mx-auto px-3 sm:px-6 py-4 sm:py-8 pb-28 md:pb-12 flex-1 flex flex-col relative z-10">
             <div className="p-6 sm:p-8 rounded-2xl bg-[#181818] border border-[#282828] animate-pulse space-y-4">
               <div className="h-6 w-36 bg-[#242424] rounded-full" />
               <div className="h-10 w-2/3 bg-[#242424] rounded-lg" />
@@ -41,7 +41,7 @@ export default function Home() {
           /* =========================================================
               MY STUBS ARCHIVE TAB VIEW
              ========================================================= */
-          <main className="w-full max-w-5xl mx-auto px-3 sm:px-6 py-4 sm:py-8 pb-20 md:pb-12 flex-1 flex flex-col relative z-10">
+          <main className="w-full max-w-5xl mx-auto px-3 sm:px-6 py-4 sm:py-8 pb-28 md:pb-12 flex-1 flex flex-col relative z-10">
             <div className="p-4 sm:p-8 rounded-2xl bg-[#181818] border border-[#282828] shadow-2xl">
               <StubsView />
             </div>
@@ -50,7 +50,7 @@ export default function Home() {
           /* =========================================================
               TRENDING TOURS TAB VIEW
              ========================================================= */
-          <main className="w-full max-w-5xl mx-auto px-3 sm:px-6 py-4 sm:py-8 pb-20 md:pb-12 flex-1 flex flex-col relative z-10">
+          <main className="w-full max-w-5xl mx-auto px-3 sm:px-6 py-4 sm:py-8 pb-28 md:pb-12 flex-1 flex flex-col relative z-10">
             <div className="p-4 sm:p-8 rounded-2xl bg-[#181818] border border-[#282828] shadow-2xl">
               <ToursView />
             </div>
@@ -59,7 +59,7 @@ export default function Home() {
           /* =========================================================
               USER PROFILE & SETTINGS TAB VIEW
              ========================================================= */
-          <main className="w-full max-w-5xl mx-auto px-3 sm:px-6 py-4 sm:py-8 pb-20 md:pb-12 flex-1 flex flex-col relative z-10">
+          <main className="w-full max-w-5xl mx-auto px-3 sm:px-6 py-4 sm:py-8 pb-28 md:pb-12 flex-1 flex flex-col relative z-10">
             <div className="p-4 sm:p-8 rounded-2xl bg-[#181818] border border-[#282828] shadow-2xl">
               <ProfileView />
             </div>
@@ -70,7 +70,7 @@ export default function Home() {
               Clean, distraction-free application workspace with no
               marketing cards or duplicate headers.
              ========================================================= */
-          <main className="w-full max-w-5xl mx-auto px-3 sm:px-6 py-4 sm:py-8 pb-20 md:pb-12 flex-1 flex flex-col relative z-10">
+          <main className="w-full max-w-5xl mx-auto px-3 sm:px-6 py-4 sm:py-8 pb-28 md:pb-12 flex-1 flex flex-col relative z-10">
             <div className="p-4 sm:p-8 rounded-2xl bg-[#181818] border border-[#282828] shadow-2xl">
               <WizardContainer />
             </div>
@@ -80,7 +80,7 @@ export default function Home() {
             UNAUTHENTICATED VIEW: SPOTIFY CONNECT HERO & VALUE PROPOSITION
             Single primary CTA with 3 feature cards below.
            ========================================================= */
-        <main className="w-full max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12 pb-20 md:pb-12 flex-1 flex flex-col justify-between relative z-10 space-y-12">
+        <main className="w-full max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12 pb-28 md:pb-12 flex-1 flex flex-col justify-between relative z-10 space-y-12">
           {/* Hero Section */}
           <div className="relative overflow-hidden rounded-2xl bg-[#181818] border border-[#282828] p-6 sm:p-12 shadow-2xl">
             <div className="max-w-2xl space-y-5">
