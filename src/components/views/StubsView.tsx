@@ -70,7 +70,7 @@ export function StubsView() {
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300 pb-24 md:pb-12">
+    <div className="space-y-6 animate-in fade-in duration-300">
       {/* View Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-neutral-800/80">
         <div>
@@ -103,9 +103,9 @@ export function StubsView() {
 
       {/* Lifetime Concert Stats Banner */}
       {tickets.length > 0 && (
-        <div className="grid grid-cols-3 gap-3 p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-neutral-900 via-[#181818] to-neutral-900 border border-neutral-800 shadow-xl">
-          <div className="text-center space-y-0.5 border-r border-neutral-800/80 pr-2">
-            <div className="text-xl sm:text-2xl font-black text-white">
+        <div className="grid grid-cols-3 gap-3 sm:gap-6 p-4 sm:p-6 rounded-2xl bg-gradient-to-r from-neutral-900 via-[#181818] to-neutral-900 border border-neutral-800 shadow-xl">
+          <div className="text-center space-y-0.5 border-r border-neutral-800/80 pr-2 sm:pr-4">
+            <div className="text-xl sm:text-2xl md:text-3xl font-black text-white">
               {stats.totalConcerts}
             </div>
             <div className="text-[10px] sm:text-xs font-semibold text-zinc-400 uppercase tracking-wider">
@@ -113,8 +113,8 @@ export function StubsView() {
             </div>
           </div>
 
-          <div className="text-center space-y-0.5 border-r border-neutral-800/80 px-2">
-            <div className="text-xl sm:text-2xl font-black text-[#1DB954]">
+          <div className="text-center space-y-0.5 border-r border-neutral-800/80 px-2 sm:px-4">
+            <div className="text-xl sm:text-2xl md:text-3xl font-black text-[#1DB954]">
               {stats.totalTracks}
             </div>
             <div className="text-[10px] sm:text-xs font-semibold text-zinc-400 uppercase tracking-wider">
@@ -122,8 +122,8 @@ export function StubsView() {
             </div>
           </div>
 
-          <div className="text-center space-y-0.5 pl-2">
-            <div className="text-xl sm:text-2xl font-black text-amber-400">
+          <div className="text-center space-y-0.5 pl-2 sm:pl-4">
+            <div className="text-xl sm:text-2xl md:text-3xl font-black text-amber-400">
               {stats.uniqueArtists}
             </div>
             <div className="text-[10px] sm:text-xs font-semibold text-zinc-400 uppercase tracking-wider">
@@ -171,7 +171,7 @@ export function StubsView() {
         </div>
       ) : (
         /* Ticket Stubs Grid */
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {tickets.map((ticket) => {
             const isDeleting = ticketToDelete === ticket.id;
 
@@ -179,7 +179,7 @@ export function StubsView() {
               <div
                 key={ticket.id}
                 onClick={() => handleOpenTicket(ticket)}
-                className="group relative rounded-2xl bg-[#161616] border border-neutral-800 hover:border-neutral-700 p-5 hover:bg-[#1c1c1c] transition-all duration-200 cursor-pointer flex flex-col justify-between space-y-4 shadow-xl overflow-hidden"
+                className="group relative rounded-2xl bg-[#161616] border border-neutral-800 hover:border-neutral-700 p-5 hover:bg-[#1c1c1c] transition-all duration-200 cursor-pointer flex flex-col justify-between space-y-4 shadow-xl hover:shadow-2xl hover:-translate-y-0.5 overflow-hidden"
               >
                 {/* Perforated Top Notches Aesthetic */}
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-2 rounded-b-full bg-[#121212] border-b border-neutral-800" />

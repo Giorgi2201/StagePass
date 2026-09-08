@@ -10,9 +10,6 @@ import {
   Sparkles,
   MapPin,
   Calendar,
-  ArrowRight,
-  TrendingUp,
-  Headphones,
   Loader2,
 } from "lucide-react";
 import { mediumTap } from "@/lib/haptics";
@@ -113,7 +110,7 @@ const WORLD_TOURS: TrendingTour[] = [
 
 export function ToursView() {
   const { setActiveTab } = useNavigation();
-  const { selectArtist, generateRehearsalSetlist } = useWizard();
+  const { generateRehearsalSetlist } = useWizard();
   const [loadingTourId, setLoadingTourId] = useState<string | null>(null);
 
   // 1-Tap Rehearsal Consensus Action
@@ -135,20 +132,8 @@ export function ToursView() {
     }
   };
 
-  // Browse All Tour Dates (transitions to Step 2)
-  const handleBrowseDates = (tour: TrendingTour) => {
-    mediumTap();
-    const artist: NormalizedArtist = {
-      id: tour.id,
-      name: tour.artistName,
-      imageUrl: tour.imageUrl,
-    };
-    selectArtist(artist);
-    setActiveTab("setlists");
-  };
-
   return (
-    <div className="space-y-6 animate-in fade-in duration-300 pb-24 md:pb-12">
+    <div className="space-y-6 animate-in fade-in duration-300">
       {/* View Header */}
       <div className="pb-4 border-b border-neutral-800/80 space-y-1">
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-500/10 border border-orange-500/30 text-orange-400 text-xs font-bold uppercase tracking-wider mb-1">
@@ -164,14 +149,14 @@ export function ToursView() {
       </div>
 
       {/* World Tours Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {WORLD_TOURS.map((tour) => {
           const isLoading = loadingTourId === tour.id;
 
           return (
             <div
               key={tour.id}
-              className="group relative rounded-2xl bg-[#161616] border border-neutral-800 hover:border-neutral-700 p-5 hover:bg-[#1a1a1a] transition-all duration-200 flex flex-col justify-between space-y-4 shadow-xl overflow-hidden"
+              className="group relative rounded-2xl bg-[#161616] border border-neutral-800 hover:border-neutral-700 p-5 sm:p-6 hover:bg-[#1a1a1a] transition-all duration-200 flex flex-col justify-between space-y-4 shadow-xl hover:shadow-2xl hover:-translate-y-0.5 overflow-hidden"
             >
               {/* Top Row: Artist Avatar & Title */}
               <div className="space-y-3">
@@ -221,36 +206,25 @@ export function ToursView() {
                 </div>
               </div>
 
-              {/* Action Buttons */}
-              <div className="pt-2 border-t border-neutral-800/80 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
-                {/* 1-Tap Rehearsal Action */}
+              {/* Card Action: Single High-Impact Primary Button */}
+              <div className="pt-3 border-t border-neutral-800/80">
                 <button
                   type="button"
                   onClick={() => handleStudyRehearsal(tour)}
                   disabled={isLoading}
-                  className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#1DB954] hover:bg-[#1ed760] disabled:bg-[#1DB954]/50 text-black font-extrabold text-xs shadow-md shadow-[#1DB954]/20 active:scale-[0.98] transition-all cursor-pointer disabled:cursor-not-allowed"
+                  className="w-full inline-flex items-center justify-center gap-2.5 px-4 py-3 rounded-xl bg-[#1DB954] hover:bg-[#1ed760] disabled:bg-[#1DB954]/50 text-black font-extrabold text-sm shadow-md shadow-[#1DB954]/20 hover:shadow-[#1DB954]/35 active:scale-[0.98] transition-all cursor-pointer disabled:cursor-not-allowed"
                 >
                   {isLoading ? (
                     <>
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <Loader2 className="w-4 h-4 animate-spin" />
                       <span>Calculating Consensus...</span>
                     </>
                   ) : (
                     <>
-                      <Sparkles className="w-3.5 h-3.5" />
+                      <Flame className="w-4 h-4 fill-black text-black" />
                       <span>Study Tour Setlist</span>
                     </>
                   )}
-                </button>
-
-                {/* Browse Individual Dates */}
-                <button
-                  type="button"
-                  onClick={() => handleBrowseDates(tour)}
-                  className="inline-flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-neutral-900 hover:bg-neutral-800 text-zinc-400 hover:text-white text-xs font-semibold transition-all cursor-pointer"
-                >
-                  <span>Select Date</span>
-                  <ArrowRight className="w-3 h-3" />
                 </button>
               </div>
             </div>

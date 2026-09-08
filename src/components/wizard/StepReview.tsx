@@ -40,7 +40,7 @@ export function StepReview() {
     parseResult.tracks.length - excludedTrackIndices.size;
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300 pb-36 md:pb-8">
+    <div className="space-y-6 animate-in fade-in duration-300">
       {/* Top Header with Circular Spotify Back Button & Summary */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-neutral-800/80">
         <div className="flex items-center gap-3">
@@ -114,31 +114,63 @@ export function StepReview() {
             className="flex-1 h-11 px-4 rounded-xl bg-[#242424] border border-neutral-700/60 text-white placeholder:text-[#B3B3B3] text-sm font-medium focus:border-white/40 outline-none transition-all"
           />
 
-          {/* Privacy Toggle Pill */}
-          <div className="flex items-center gap-1.5 p-1 rounded-xl bg-[#242424] border border-neutral-700/60 self-start sm:self-auto">
+          <div className="flex items-center gap-2.5">
+            {/* Privacy Toggle Pill (Exact h-11 height matching Create button) */}
+            <div className="h-11 p-1 rounded-xl bg-[#242424] border border-neutral-700/60 flex items-center gap-1 shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsPublic(false)}
+                className={`h-full px-3.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  !isPublic
+                    ? "bg-[#1DB954] text-black font-bold shadow"
+                    : "text-zinc-400 hover:text-white"
+                }`}
+              >
+                <Lock className="w-3.5 h-3.5" />
+                <span>Private</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsPublic(true)}
+                className={`h-full px-3.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                  isPublic
+                    ? "bg-[#1DB954] text-black font-bold shadow"
+                    : "text-zinc-400 hover:text-white"
+                }`}
+              >
+                <Globe className="w-3.5 h-3.5" />
+                <span>Public</span>
+              </button>
+            </div>
+
+            {/* Quick-Action Create Button in Top Header */}
             <button
               type="button"
-              onClick={() => setIsPublic(false)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
-                !isPublic
-                  ? "bg-[#1DB954] text-black font-bold shadow"
-                  : "text-zinc-400 hover:text-white"
-              }`}
+              onClick={() => {
+                mediumTap();
+                createPlaylist();
+              }}
+              disabled={isGenerating || activeTracksCount === 0}
+              className="flex-1 sm:flex-initial h-11 px-4 sm:px-5 rounded-xl bg-[#1DB954] hover:bg-[#1ed760] disabled:bg-[#1DB954]/50 text-black font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-[#1DB954]/20 active:scale-[0.97] transition-all cursor-pointer disabled:cursor-not-allowed shrink-0"
+              title={`Create playlist with ${activeTracksCount} tracks`}
             >
-              <Lock className="w-3 h-3" />
-              <span>Private</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsPublic(true)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
-                isPublic
-                  ? "bg-[#1DB954] text-black font-bold shadow"
-                  : "text-zinc-400 hover:text-white"
-              }`}
-            >
-              <Globe className="w-3 h-3" />
-              <span>Public</span>
+              {isGenerating ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Creating...</span>
+                </>
+              ) : (
+                <>
+                  <svg
+                    className="w-4 h-4 fill-black shrink-0"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.498 17.306c-.216.353-.674.467-1.027.25-2.813-1.718-6.354-2.107-10.526-1.155-.403.092-.806-.16-.898-.563-.092-.403.16-.806.563-.898 4.568-1.044 8.484-.606 11.638 1.328.353.216.467.674.25 1.027zm1.467-3.262c-.272.441-.849.582-1.29.31-3.22-1.979-8.128-2.551-11.936-1.394-.497.151-1.029-.133-1.18-.63-.151-.497.133-1.029.63-1.18 4.354-1.322 9.774-.684 13.466 1.583.441.272.582.849.31 1.291zm.126-3.41c-3.861-2.293-10.223-2.504-13.889-1.391-.592.18-1.223-.155-1.403-.747-.18-.592.155-1.223.747-1.403 4.218-1.28 11.238-1.033 15.688 1.609.533.316.707 1.009.391 1.542-.316.533-1.009.707-1.542.391z" />
+                  </svg>
+                  <span>Create</span>
+                </>
+              )}
             </button>
           </div>
         </div>
@@ -299,44 +331,49 @@ export function StepReview() {
         </div>
       </div>
 
-      {/* Docked Sticky Bottom Action Bar: Stacked neatly above the mobile Liquid Glass Navbar on mobile, in-flow on desktop */}
-      <div className="fixed bottom-[calc(4rem+max(12px,calc(env(safe-area-inset-bottom,0px)-6px)))] left-0 right-0 z-30 bg-[#121212]/90 backdrop-blur-md border-t border-white/5 py-3 px-4 shadow-[0_-8px_24px_rgba(0,0,0,0.5)] md:static md:bottom-auto md:bg-transparent md:backdrop-blur-none md:border-0 md:p-0 md:pt-4 md:shadow-none transition-all">
-        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="hidden sm:flex items-center gap-2 text-xs text-[#B3B3B3]">
-            <span>{activeTracksCount} of {parseResult.tracks.length} tracks selected</span>
-            <span>•</span>
-            <span>Est. playlist duration: ~{activeTracksCount * 4} min</span>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => {
-              mediumTap();
-              createPlaylist();
-            }}
-            disabled={isGenerating || activeTracksCount === 0}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-3 px-8 py-3.5 rounded-full bg-[#1DB954] hover:bg-[#1ed760] disabled:bg-[#1DB954]/50 text-black font-extrabold text-sm sm:text-base shadow-xl shadow-[#1DB954]/25 active:scale-[0.98] transition-all cursor-pointer disabled:cursor-not-allowed"
-          >
-            {isGenerating ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                <span>Building Spotify Playlist...</span>
-              </>
-            ) : (
-              <>
-                {/* Official Spotify Icon SVG */}
-                <svg
-                  className="w-5 h-5 fill-black shrink-0"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.498 17.306c-.216.353-.674.467-1.027.25-2.813-1.718-6.354-2.107-10.526-1.155-.403.092-.806-.16-.898-.563-.092-.403.16-.806.563-.898 4.568-1.044 8.484-.606 11.638 1.328.353.216.467.674.25 1.027zm1.467-3.262c-.272.441-.849.582-1.29.31-3.22-1.979-8.128-2.551-11.936-1.394-.497.151-1.029-.133-1.18-.63-.151-.497.133-1.029.63-1.18 4.354-1.322 9.774-.684 13.466 1.583.441.272.582.849.31 1.291zm.126-3.41c-3.861-2.293-10.223-2.504-13.889-1.391-.592.18-1.223-.155-1.403-.747-.18-.592.155-1.223.747-1.403 4.218-1.28 11.238-1.033 15.688 1.609.533.316.707 1.009.391 1.542-.316.533-1.009.707-1.542.391z" />
-                </svg>
-                <span>Create Spotify Playlist ({activeTracksCount} tracks)</span>
-              </>
-            )}
-          </button>
+      {/* Primary Action Section: Inline at the end of the setlist */}
+      <div className="mt-8 flex flex-col items-center justify-center text-center space-y-3">
+        {/* Track selection summary counter */}
+        <div className="flex items-center gap-2 text-xs text-[#B3B3B3]">
+          <span>{activeTracksCount} of {parseResult.tracks.length} tracks selected</span>
+          <span>•</span>
+          <span>Est. playlist duration: ~{activeTracksCount * 4} min</span>
         </div>
+
+        {/* Prominent Spotify Green Button */}
+        <button
+          type="button"
+          onClick={() => {
+            mediumTap();
+            createPlaylist();
+          }}
+          disabled={isGenerating || activeTracksCount === 0}
+          className="w-full max-w-md inline-flex items-center justify-center gap-3 px-8 py-4 rounded-full bg-[#1DB954] hover:bg-[#1ed760] disabled:bg-[#1DB954]/50 text-black font-extrabold text-base shadow-xl shadow-[#1DB954]/25 hover:shadow-[#1DB954]/40 active:scale-[0.98] transition-all cursor-pointer disabled:cursor-not-allowed"
+        >
+          {isGenerating ? (
+            <>
+              <Loader2 className="w-5 h-5 animate-spin" />
+              <span>Building Spotify Playlist...</span>
+            </>
+          ) : (
+            <>
+              {/* Official Spotify Icon SVG */}
+              <svg
+                className="w-5 h-5 fill-black shrink-0"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.498 17.306c-.216.353-.674.467-1.027.25-2.813-1.718-6.354-2.107-10.526-1.155-.403.092-.806-.16-.898-.563-.092-.403.16-.806.563-.898 4.568-1.044 8.484-.606 11.638 1.328.353.216.467.674.25 1.027zm1.467-3.262c-.272.441-.849.582-1.29.31-3.22-1.979-8.128-2.551-11.936-1.394-.497.151-1.029-.133-1.18-.63-.151-.497.133-1.029.63-1.18 4.354-1.322 9.774-.684 13.466 1.583.441.272.582.849.31 1.291zm.126-3.41c-3.861-2.293-10.223-2.504-13.889-1.391-.592.18-1.223-.155-1.403-.747-.18-.592.155-1.223.747-1.403 4.218-1.28 11.238-1.033 15.688 1.609.533.316.707 1.009.391 1.542-.316.533-1.009.707-1.542.391z" />
+              </svg>
+              <span>Create Spotify Playlist ({activeTracksCount} tracks)</span>
+            </>
+          )}
+        </button>
+
+        {/* Subtle helper line */}
+        <p className="text-xs text-zinc-500 font-medium">
+          Playlist will be saved directly to your Spotify library
+        </p>
       </div>
     </div>
   );
