@@ -158,3 +158,10 @@ trackIds count: 182, concert tracks count: 22
 session present: false
 user: none
 Returning isGuest: true
+
+[2026-09-09T07:29:07.785Z] /api/spotify/check-liked-tracks called.
+artist: Coldplay
+trackIds count: 10, concert tracks count: 22
+session present: false
+user: none
+Returning isGuest: true

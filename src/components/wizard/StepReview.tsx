@@ -306,11 +306,7 @@ export function StepReview() {
   };
 
   return (
-    <div
-      className={`space-y-6 animate-in fade-in duration-300 transition-all duration-300 ${
-        activeTrack ? "pb-44 md:pb-28" : "pb-28 md:pb-12"
-      }`}
-    >
+    <div className="space-y-6 animate-in fade-in duration-300 pb-5 sm:pb-6">
       {/* Top Header with Circular Spotify Back Button & Summary */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-neutral-800/80">
         <div className="flex items-center gap-3">
@@ -675,7 +671,13 @@ export function StepReview() {
             return (
               <div
                 key={index}
-                className={`group grid grid-cols-12 gap-2 px-4 py-3 items-center text-xs sm:text-sm transition-colors ${
+                onClick={() =>
+                  toggleAudioPlayback(
+                    track,
+                    selectedArtist?.name || parseResult.artistName || ""
+                  )
+                }
+                className={`group grid grid-cols-12 gap-2 px-4 py-3 items-center text-xs sm:text-sm transition-colors cursor-pointer select-none ${
                   isExcluded
                     ? "bg-[#141414] opacity-40 hover:opacity-75"
                     : isCurrentTrack
@@ -736,13 +738,7 @@ export function StepReview() {
                 <div className="col-span-7 sm:col-span-6 min-w-0 pr-2">
                   <div className="flex items-center gap-2 flex-wrap min-w-0">
                     <span
-                      onClick={() =>
-                        toggleAudioPlayback(
-                          track,
-                          selectedArtist?.name || parseResult.artistName || ""
-                        )
-                      }
-                      className={`font-bold leading-snug break-words cursor-pointer hover:underline ${
+                      className={`font-bold leading-snug break-words ${
                         isExcluded
                           ? "line-through text-zinc-400"
                           : isCurrentTrack
@@ -859,7 +855,8 @@ export function StepReview() {
                 <div className="col-span-4 sm:col-span-1 flex justify-end sm:justify-center">
                   <button
                     type="button"
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
                       mediumTap();
                       toggleTrack(index);
                     }}
@@ -968,8 +965,8 @@ export function StepReview() {
           </button>
         </div>
 
-        {/* Subtle helper line with calibrated bottom margin */}
-        <p className="text-xs text-zinc-500 font-medium mb-5">
+        {/* Subtle helper line with compact bottom margin */}
+        <p className="text-xs text-zinc-500 font-medium mb-1">
           {isAuthenticated
             ? "Playlists will be saved directly to your music library"
             : "Free instant ticket stubs & YouTube export • Connect Spotify anytime to sync playlists"}

@@ -68,11 +68,14 @@ export function MiniPlayer() {
            ========================================================================= */}
         <aside
           aria-label="Mobile Audio Preview Player"
-          className="md:hidden fixed left-1/2 -translate-x-1/2 z-35 w-[calc(100%-2rem)] max-w-sm bottom-[calc(5.25rem+env(safe-area-inset-bottom,16px))] pointer-events-auto select-none"
+          className="md:hidden fixed left-1/2 -translate-x-1/2 z-35 w-[calc(100%-2.5rem)] max-w-sm bottom-[calc(max(12px,calc(env(safe-area-inset-bottom,0px)-6px))+3.75rem+8px)] pointer-events-auto select-none"
+          style={{
+            bottom: "calc(max(12px, calc(env(safe-area-inset-bottom, 0px) - 6px)) + 3.75rem + 8px)",
+          }}
         >
-          <div className="relative overflow-hidden rounded-full bg-black/80 backdrop-blur-2xl border border-white/10 shadow-[0_16px_40px_rgba(0,0,0,0.65)] p-2 pl-2.5 pr-2.5 flex items-center justify-between gap-3">
+          <div className="relative overflow-hidden rounded-full bg-black/65 backdrop-blur-2xl border border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] p-2 pl-2.5 pr-2.5 flex items-center justify-between gap-3">
             {/* Specular top hairline reflection */}
-            <div className="absolute top-0 left-6 right-6 h-[1px] bg-gradient-to-r from-transparent via-white/20 to-transparent pointer-events-none" />
+            <div className="absolute top-0 left-6 right-6 h-[1px] bg-gradient-to-r from-transparent via-white/15 to-transparent pointer-events-none" />
 
             {/* Left: Circular Album Artwork Thumbnail */}
             <div className="relative w-9 h-9 rounded-full overflow-hidden ring-1 ring-white/15 bg-neutral-900 shrink-0 flex items-center justify-center shadow-inner">
