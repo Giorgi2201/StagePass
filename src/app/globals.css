@@ -32,6 +32,13 @@ body {
   min-height: 100dvh;
   overflow-x: hidden;
   position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+::selection {
+  background-color: rgba(29, 185, 84, 0.3);
+  color: #ffffff;
 }
 
 /* Eliminate 300ms mobile tap delay across interactive elements */

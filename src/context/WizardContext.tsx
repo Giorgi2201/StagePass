@@ -16,6 +16,7 @@ import type { CreatePlaylistResponse } from "@/types/spotify";
 import type { YouTubePlaylistResponse } from "@/types/youtube";
 import { useAuth } from "@/context/AuthContext";
 import { saveTicketStub, getDefaultTicketTheme } from "@/lib/storage";
+import { exportPlaylistCover } from "@/lib/cover-export";
 
 export type WizardStep = "search" | "shows" | "review" | "success";
 export type WizardMode = "rehearsal" | "memory" | "essential";
@@ -36,6 +37,7 @@ interface WizardContextType {
   creationResult: CreatePlaylistResponse | null;
   youtubeResult: YouTubePlaylistResponse | null;
   errorMessage: string | null;
+  coverDataUrl: string | null;
 
   setMode: (mode: WizardMode) => void;
   setArtistQuery: (query: string) => void;
@@ -46,7 +48,8 @@ interface WizardContextType {
   toggleTrack: (index: number) => void;
   setPlaylistTitle: (title: string) => void;
   setIsPublic: (isPublic: boolean) => void;
-  createPlaylist: () => Promise<void>;
+  setCoverDataUrl: (url: string | null) => void;
+  createPlaylist: (includeCoverImage?: boolean) => Promise<void>;
   createYouTubePlaylist: () => Promise<YouTubePlaylistResponse | null>;
   setYouTubeResult: (result: YouTubePlaylistResponse | null) => void;
   goToStep: (step: WizardStep) => void;
@@ -114,6 +117,7 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
   const [youtubeResult, setYouTubeResult] =
     useState<YouTubePlaylistResponse | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [coverDataUrl, setCoverDataUrl] = useState<string | null>(null);
 
   const { isAuthenticated } = useAuth();
 
@@ -307,7 +311,7 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  const createPlaylist = useCallback(async () => {
+  const createPlaylist = useCallback(async (includeCoverImage: boolean = true) => {
     if (!parseResult || !selectedArtist) return;
 
     // Filter out excluded tracks
@@ -324,6 +328,20 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
     setGenerationStatus("Matching tracks in Spotify catalog...");
     setErrorMessage(null);
 
+    // Snapshot custom 640x640 cover art from offscreen DOM (guaranteed <= 240 KB)
+    let coverImageBase64: string | undefined;
+    try {
+      const coverResult = await exportPlaylistCover();
+      if (coverResult?.dataUrl) {
+        setCoverDataUrl(coverResult.dataUrl);
+      }
+      if (includeCoverImage && coverResult?.base64) {
+        coverImageBase64 = coverResult.base64;
+      }
+    } catch (coverErr) {
+      console.warn("[Wizard] Custom cover snapshot bypassed:", coverErr);
+    }
+
     try {
       // Transition to success screen right away to display real-time animation
       setStep("success");
@@ -339,8 +357,10 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
           concertTitle: playlistTitle.trim() || `${parseResult.artistName} Live Setlist`,
           description: `Generated with StagePass • ${parseResult.venueInfo || "Concert Setlist"} • ${activeTracks.length} tracks`,
           isPublic,
-          performingArtist: selectedArtist.name,
+          performingArtist: selectedArtist?.name || parseResult.artistName || "Artist",
+          artistMbid: selectedArtist?.id,
           tracks: activeTracks,
+          coverImageBase64,
         }),
       });
 
@@ -467,6 +487,7 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
     setCreationResult(null);
     setYouTubeResult(null);
     setErrorMessage(null);
+    setCoverDataUrl(null);
     if (typeof window !== "undefined") {
       sessionStorage.removeItem("stagepass_pending_wizard");
     }
@@ -490,6 +511,7 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
         creationResult,
         youtubeResult,
         errorMessage,
+        coverDataUrl,
 
         setMode,
         setArtistQuery,
@@ -500,6 +522,7 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
         toggleTrack,
         setPlaylistTitle,
         setIsPublic,
+        setCoverDataUrl,
         createPlaylist,
         createYouTubePlaylist,
         setYouTubeResult,

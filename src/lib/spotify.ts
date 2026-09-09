@@ -1,7 +1,6 @@
 import type { NormalizedArtist, NormalizedTrack } from "@/types/setlist";
 import { getValidSession } from "@/lib/auth";
 import type {
-  CheckLikedTracksResponse,
   MatchedTrackResult,
   SpotifyPlaylist,
   SpotifySearchResponse,
@@ -39,34 +38,54 @@ function sanitizeTrackTitle(title: string): string {
 }
 
 /**
+ * Global rate-limit tracking for the Spotify /search endpoint
+ */
+let searchRateLimitUntil = 0;
+
+/**
  * Execute a single Spotify search query with bearer token
  */
 async function searchSpotify(
   query: string,
   userAccessToken: string
 ): Promise<SpotifyTrack[]> {
+  if (Date.now() < searchRateLimitUntil) {
+    return [];
+  }
+
   const url = `${SPOTIFY_API_BASE_URL}/search?q=${encodeURIComponent(
     query
   )}&type=track&limit=10`;
 
-  const response = await fetch(url, {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${userAccessToken}`,
-      Accept: "application/json",
-    },
-    cache: "no-store",
-  });
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${userAccessToken}`,
+        Accept: "application/json",
+      },
+      cache: "no-store",
+    });
 
-  if (!response.ok) {
-    if (response.status === 429) {
-      console.warn("Spotify search rate limit reached (429)");
+    if (!response.ok) {
+      if (response.status === 429) {
+        const retryAfter = parseInt(
+          response.headers.get("retry-after") || "60",
+          10
+        );
+        searchRateLimitUntil = Date.now() + Math.max(retryAfter, 60) * 1000;
+        console.warn(
+          `[Spotify API Warning] /v1/search rate limit reached (429). Pausing search calls for ${retryAfter}s`
+        );
+      }
+      return [];
     }
+
+    const data = (await response.json()) as SpotifySearchResponse;
+    return data.tracks?.items || [];
+  } catch {
     return [];
   }
-
-  const data = (await response.json()) as SpotifySearchResponse;
-  return data.tracks?.items || [];
 }
 
 /**
@@ -187,47 +206,319 @@ export async function matchTrackWithCandidates(
 }
 
 /**
- * Matches a batch of setlist tracks with controlled concurrency to respect rate limits
+ * Fast mapping of globally trending touring artists to verified Spotify Artist IDs
+ * for instant zero-latency catalog resolution without burning search rate limits.
+ */
+const POPULAR_ARTIST_SPOTIFY_IDS: Record<string, string> = {
+  "coldplay": "4gzpq5DPGxSnKTe4SA8HAU",
+  "kendrick lamar": "2YZyLoL8N0Wb9xBt1NhZWg",
+  "taylor swift": "06HL4z0CvFAxyc27GXpf02",
+  "radiohead": "4Z8W4fKeB5YxbusRsdQVPb",
+  "the beatles": "3WrFJ7ztbogygnTHbHJFl2",
+  "foo fighters": "7jy3rLJdDQY21OgRLCZ9sD",
+  "billie eilish": "6qqNVTkY8uBg9cP3Jd7DAH",
+  "drake": "3TVXtAsR1Inumwj472S9r4",
+  "the weeknd": "1Xyo4u8uXC1ZmMpatF05PJ",
+  "dua lipa": "6M2wZ9GZgrQXHCFfjv46we",
+  "ed sheeran": "6eUKZXaKkcviH0Ku9w2n3V",
+  "olivia rodrigo": "1McMsnEElThX1knmY4oliG",
+  "harry styles": "6KImCVD70vtIoJWnq6nGn3",
+  "arctic monkeys": "7Ln80DlNuAcXZav7Ztiq6Q",
+  "beyoncé": "6vWDO969PvNqNYHIOW5v0m",
+  "beyonce": "6vWDO969PvNqNYHIOW5v0m",
+  "oasis": "2DaxqgrOhkeH0fpeiQq2f4",
+  "red hot chili peppers": "0L8ExT028jH3ioRviAhb90",
+  "green day": "7oPftvlwr6VrsViSDV7fJY",
+  "blink-182": "6FBDaR13swtiWwGhX1WnP9",
+  "linkin park": "6XyY86QOPPrYVGvF9ch6wz",
+  "paramore": "74XFHRwlV6OrjEM0A2NCMF",
+  "post malone": "246dkjvS1zLTtiykYqBl6K",
+  "travis scott": "0Y5tJX1MQlPlqiwlOH1tJY",
+  "sza": "7tYKF4w9nC0nq9CsPZTHte",
+  "adele": "4dpARuHxo51G3z768sgnrY",
+  "bruno mars": "0du5cEVh5yTK9QJze8zA0C",
+  "metallica": "2ye2Wgw4gimLv2eAKyk1NB",
+  "queen": "1dfeR4HaWDbWqFssioeoL2",
+};
+
+/**
+ * Resolves an artist's Spotify ID via fast dictionary, MusicBrainz relations, or search
+ */
+export async function resolveArtistSpotifyId(
+  artistName: string,
+  mbid?: string,
+  token?: string
+): Promise<string | null> {
+  const clean = artistName.toLowerCase().trim();
+  if (POPULAR_ARTIST_SPOTIFY_IDS[clean]) {
+    return POPULAR_ARTIST_SPOTIFY_IDS[clean];
+  }
+
+  // 1. Try MusicBrainz URL relations (fast, unauthenticated, zero rate limits)
+  if (mbid && mbid.trim()) {
+    try {
+      const mbRes = await fetch(
+        `https://musicbrainz.org/ws/2/artist/${encodeURIComponent(mbid.trim())}?inc=url-rels&fmt=json`,
+        {
+          headers: { "User-Agent": "StagePass/1.0 (contact@stagepass.live)" },
+          next: { revalidate: 86400 * 7 },
+        }
+      );
+      if (mbRes.ok) {
+        const mbData = await mbRes.json();
+        const rel = mbData.relations?.find((r: { url?: { resource?: string } }) =>
+          r.url?.resource?.includes("spotify.com/artist")
+        );
+        const resourceUrl = rel?.url?.resource;
+        if (resourceUrl) {
+          const match = resourceUrl.match(/\/artist\/([a-zA-Z0-9]+)/);
+          if (match && match[1]) {
+            return match[1];
+          }
+        }
+      }
+    } catch (err) {
+      console.warn(`[Spotify] Failed to resolve Spotify Artist ID from MusicBrainz for "${artistName}":`, err);
+    }
+  }
+
+  // 2. Fallback: Search endpoint if not currently 429
+  if (token && Date.now() >= searchRateLimitUntil) {
+    try {
+      const url = `${SPOTIFY_API_BASE_URL}/search?q=${encodeURIComponent(
+        `artist:"${artistName}"`
+      )}&type=artist&limit=1`;
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+        cache: "no-store",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const artist = data.artists?.items?.[0];
+        if (artist?.id) return artist.id;
+      } else if (res.status === 429) {
+        const retry = parseInt(res.headers.get("retry-after") || "60", 10);
+        searchRateLimitUntil = Date.now() + retry * 1000;
+      }
+    } catch {
+      // Ignore
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Fetches an artist's full catalog of tracks from their recent albums & singles
+ * without using the restricted or rate-limited /search endpoint.
+ */
+export async function fetchArtistCatalogTracks(
+  spotifyArtistId: string,
+  token: string
+): Promise<SpotifyTrack[]> {
+  try {
+    // Fetch page 1 (0-10) and page 2 (10-20) of albums in parallel
+    const [res1, res2] = await Promise.all([
+      fetch(`${SPOTIFY_API_BASE_URL}/artists/${spotifyArtistId}/albums?limit=10&offset=0`, {
+        headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+        next: { revalidate: 86400 },
+      }),
+      fetch(`${SPOTIFY_API_BASE_URL}/artists/${spotifyArtistId}/albums?limit=10&offset=10`, {
+        headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+        next: { revalidate: 86400 },
+      }),
+    ]);
+
+    const [d1, d2] = await Promise.all([
+      res1.ok ? res1.json() : { items: [] },
+      res2.ok ? res2.json() : { items: [] },
+    ]);
+
+    const albums: Array<{ id: string; name: string; images?: any[] }> = [
+      ...(d1.items || []),
+      ...(d2.items || []),
+    ];
+
+    if (albums.length === 0) return [];
+
+    // Fetch tracks for all albums in parallel
+    const albumTrackPromises = albums.map(async (album) => {
+      try {
+        const res = await fetch(
+          `${SPOTIFY_API_BASE_URL}/albums/${album.id}/tracks?limit=30`,
+          {
+            headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+            next: { revalidate: 86400 },
+          }
+        );
+        if (!res.ok) return [];
+        const data = await res.json();
+        return (data.items || []).map((t: any) => ({
+          ...t,
+          album: {
+            id: album.id,
+            name: album.name,
+            images: album.images || [],
+          },
+        }));
+      } catch {
+        return [];
+      }
+    });
+
+    const trackArrays = await Promise.all(albumTrackPromises);
+    return trackArrays.flat();
+  } catch (err) {
+    console.warn(`[Spotify] Failed to fetch artist catalog tracks for ${spotifyArtistId}:`, err);
+    return [];
+  }
+}
+
+function cleanTitleForMatching(s: string): string {
+  return s
+    .toLowerCase()
+    .replace(/[\(\[\{].*?[\)\]\}]/g, "")
+    .replace(/[^a-z0-9]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function findBestCatalogMatch(
+  setlistTitle: string,
+  catalogTracks: SpotifyTrack[]
+): SpotifyTrack | null {
+  const s = cleanTitleForMatching(setlistTitle);
+  if (!s) return null;
+
+  // 1. Exact cleaned title match (prioritizes studio release over live)
+  const exact = catalogTracks.find((t) => cleanTitleForMatching(t.name) === s);
+  if (exact) return exact;
+
+  // 2. Word-boundary prefix match (e.g. "Yellow - Live in Buenos Aires" matches "Yellow")
+  const prefix = catalogTracks.find((t) => {
+    const c = cleanTitleForMatching(t.name);
+    return c.startsWith(s + " ") || s.startsWith(c + " ");
+  });
+  if (prefix) return prefix;
+
+  return null;
+}
+
+/**
+ * Resilient multi-tier batch track matching:
+ * 1. Checks if track already has a valid 22-char Spotify ID (0 calls)
+ * 2. Matches against artist's album catalog (0 search quota used, immune to /search 429)
+ * 3. Falls back to individual search only if search endpoint is not rate-limited
  */
 export async function batchMatchTracks(
   tracks: NormalizedTrack[],
   performingArtist: string,
   userAccessToken: string,
-  concurrency = 5
+  concurrency = 5,
+  artistMbid?: string,
+  artistSpotifyId?: string
 ): Promise<MatchedTrackResult[]> {
   const results: MatchedTrackResult[] = [];
+  const token = userAccessToken || (await getActiveSpotifyToken()) || "";
 
-  for (let i = 0; i < tracks.length; i += concurrency) {
-    const chunk = tracks.slice(i, i + concurrency);
+  // 1. Fast Pass: Resolve tracks that already have valid 22-char Spotify IDs
+  const pendingIndices: number[] = [];
+  for (let i = 0; i < tracks.length; i++) {
+    const t = tracks[i];
+    if (t.id && /^[a-zA-Z0-9]{22}$/.test(t.id) && !t.id.startsWith("trk_")) {
+      results[i] = {
+        originalQuery: t.name,
+        spotifyTrack: {
+          id: t.id,
+          uri: `spotify:track:${t.id}`,
+          name: t.name,
+          popularity: t.confidenceScore || 80,
+          duration_ms: 240000,
+          preview_url: (t as any).previewUrl || null,
+          artists: [{ id: "", name: performingArtist }],
+          album: { id: "", name: "", images: [] },
+        },
+        status: "matched",
+      };
+    } else {
+      pendingIndices.push(i);
+    }
+  }
 
-    const chunkResults = await Promise.all(
-      chunk.map(async (track) => {
-        try {
-          const spotifyTrack = await findBestSpotifyTrack(
-            track.name,
-            performingArtist,
-            track.originalArtist,
-            track.isCover,
-            userAccessToken
-          );
+  // If all tracks were already resolved (e.g. Essential Hits), return immediately
+  if (pendingIndices.length === 0) {
+    return results;
+  }
 
-          return {
+  // 2. Artist Catalog Strategy: Fetch artist's albums and match tracks in-memory (0 search quota used)
+  const resolvedArtistId =
+    artistSpotifyId ||
+    (await resolveArtistSpotifyId(performingArtist, artistMbid, token));
+
+  if (resolvedArtistId) {
+    const catalogTracks = await fetchArtistCatalogTracks(resolvedArtistId, token);
+    if (catalogTracks.length > 0) {
+      for (const idx of [...pendingIndices]) {
+        const track = tracks[idx];
+        const match = findBestCatalogMatch(track.name, catalogTracks);
+        if (match) {
+          results[idx] = {
             originalQuery: track.name,
-            spotifyTrack,
-            status: spotifyTrack ? ("matched" as const) : ("unmatched" as const),
+            spotifyTrack: match,
+            status: "matched",
           };
-        } catch (err) {
-          console.error(`Error matching track '${track.name}':`, err);
-          return {
-            originalQuery: track.name,
-            spotifyTrack: null,
-            status: "unmatched" as const,
-          };
+          const removePos = pendingIndices.indexOf(idx);
+          if (removePos !== -1) {
+            pendingIndices.splice(removePos, 1);
+          }
         }
-      })
-    );
+      }
+    }
+  }
 
-    results.push(...chunkResults);
+  // 3. Fallback: Search remaining tracks individually (only if search is not rate-limited)
+  if (pendingIndices.length > 0 && Date.now() >= searchRateLimitUntil) {
+    for (let i = 0; i < pendingIndices.length; i += concurrency) {
+      if (Date.now() < searchRateLimitUntil) break;
+
+      const chunk = pendingIndices.slice(i, i + concurrency);
+      await Promise.all(
+        chunk.map(async (idx) => {
+          const track = tracks[idx];
+          try {
+            const spotifyTrack = await findBestSpotifyTrack(
+              track.name,
+              performingArtist,
+              track.originalArtist,
+              track.isCover,
+              token
+            );
+            results[idx] = {
+              originalQuery: track.name,
+              spotifyTrack,
+              status: spotifyTrack ? "matched" : "unmatched",
+            };
+          } catch {
+            results[idx] = {
+              originalQuery: track.name,
+              spotifyTrack: null,
+              status: "unmatched",
+            };
+          }
+        })
+      );
+    }
+  }
+
+  // 4. Fill in any remaining unresolved positions as unmatched
+  for (let i = 0; i < tracks.length; i++) {
+    if (!results[i]) {
+      results[i] = {
+        originalQuery: tracks[i].name,
+        spotifyTrack: null,
+        status: "unmatched",
+      };
+    }
   }
 
   return results;
@@ -314,6 +605,52 @@ export async function addTracksToPlaylist(
         `Failed to add tracks to Spotify playlist (${response.status} ${response.statusText}): ${errorBody}`
       );
     }
+  }
+}
+
+/**
+ * Uploads a custom playlist cover image (JPEG base64 encoded, max 256 KB)
+ * using PUT https://api.spotify.com/v1/playlists/{playlistId}/images
+ */
+export async function uploadPlaylistCoverImage(
+  playlistId: string,
+  imageBase64: string,
+  userAccessToken: string
+): Promise<boolean> {
+  try {
+    const rawBase64 = imageBase64
+      .replace(/^data:image\/[a-z]+;base64,/, "")
+      .trim();
+
+    const url = `${SPOTIFY_API_BASE_URL}/playlists/${encodeURIComponent(
+      playlistId
+    )}/images`;
+
+    const response = await fetch(url, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${userAccessToken}`,
+        "Content-Type": "image/jpeg",
+      },
+      body: rawBase64,
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.text().catch(() => "");
+      console.warn(
+        `[Spotify API Warning] PUT /playlists/${playlistId}/images failed (${response.status}):`,
+        errorBody
+      );
+      return false;
+    }
+
+    return true;
+  } catch (err) {
+    console.warn(
+      `[Spotify API Error] Error uploading cover image to playlist ${playlistId}:`,
+      err
+    );
+    return false;
   }
 }
 
@@ -765,310 +1102,3 @@ export async function fetchArtistTopTracks(
     };
   });
 }
-
-/**
- * Cross-references a list of Spotify track IDs against the user's "Liked Songs" library.
- * Batches requests into chunks of up to 50 tracks (Spotify API limit) concurrently.
- */
-export async function checkUserLikedTracks(
-  trackIds: string[],
-  userAccessToken: string,
-  tracksContext?: Array<{ id?: string; name: string; candidateIds?: string[] }>,
-  performingArtist?: string
-): Promise<CheckLikedTracksResponse> {
-  const totalConcertTracks =
-    tracksContext && tracksContext.length > 0
-      ? tracksContext.length
-      : trackIds.length;
-
-  if (!userAccessToken) {
-    return {
-      success: false,
-      isGuest: true,
-      likedMap: {},
-      likedCount: 0,
-      totalChecked: totalConcertTracks,
-      readinessPercentage: 0,
-    };
-  }
-
-  // Pre-initialize likedMap with false for all input IDs and candidate IDs
-  const likedMap: Record<string, boolean> = {};
-
-  // Filter and sanitize valid Spotify track IDs
-  const validTrackIds: string[] = [];
-  const addTrackId = (rawId?: string) => {
-    if (typeof rawId !== "string") return;
-    let id = rawId.trim();
-    if (id.startsWith("spotify:track:")) {
-      id = id.replace("spotify:track:", "").trim();
-    }
-    if (/^[a-zA-Z0-9]+$/.test(id)) {
-      validTrackIds.push(id);
-      likedMap[id] = false;
-    }
-  };
-
-  for (const rawId of trackIds) {
-    addTrackId(rawId);
-  }
-
-  if (tracksContext) {
-    for (const ct of tracksContext) {
-      addTrackId(ct.id);
-      if (ct.candidateIds) {
-        for (const cid of ct.candidateIds) {
-          addTrackId(cid);
-        }
-      }
-    }
-  }
-
-  const uniqueIds = Array.from(new Set(validTrackIds));
-
-  // Spotify modern Web API endpoint GET /v1/me/library/contains enforces maximum 40 URIs per request
-  const BATCH_SIZE = 40;
-  const batches: string[][] = [];
-  for (let i = 0; i < uniqueIds.length; i += BATCH_SIZE) {
-    batches.push(uniqueIds.slice(i, i + BATCH_SIZE));
-  }
-
-  try {
-    // 1. Check all candidate IDs against /v1/me/library/contains?uris=spotify:track:...
-    const containsPromise = Promise.all(
-      batches.map(async (batch) => {
-        try {
-          const urisParam = batch
-            .map((id) =>
-              encodeURIComponent(
-                id.startsWith("spotify:track:") ? id : `spotify:track:${id}`
-              )
-            )
-            .join(",");
-          const url = `${SPOTIFY_API_BASE_URL}/me/library/contains?uris=${urisParam}`;
-
-          const res = await fetch(url, {
-            method: "GET",
-            headers: {
-              Authorization: `Bearer ${userAccessToken}`,
-              Accept: "application/json",
-            },
-            cache: "no-store",
-          });
-
-          if (!res.ok) {
-            const errBody = await res.text().catch(() => "");
-            console.warn(
-              `[Spotify Liked Tracks] /me/library/contains request failed (status: ${res.status}): ${res.statusText}`,
-              errBody
-            );
-            return batch.map(() => false);
-          }
-
-          const data = (await res.json()) as boolean[];
-          if (Array.isArray(data)) {
-            return data;
-          }
-          return batch.map(() => false);
-        } catch (err) {
-          console.error(
-            "[Spotify Liked Tracks] Network error querying /v1/me/library/contains:",
-            err
-          );
-          return batch.map(() => false);
-        }
-      })
-    );
-
-    // 2. Concurrently ingest user's saved tracks from /v1/me/tracks (up to 250 tracks)
-    const savedTracksPromise = (async () => {
-      try {
-        const offsets = [0, 50, 100, 150, 200];
-        const pageResults = await Promise.allSettled(
-          offsets.map(async (offset) => {
-            const url = `${SPOTIFY_API_BASE_URL}/me/tracks?limit=50&offset=${offset}`;
-            const res = await fetch(url, {
-              headers: {
-                Authorization: `Bearer ${userAccessToken}`,
-                Accept: "application/json",
-              },
-              cache: "no-store",
-            });
-            if (!res.ok) return [];
-            const data = await res.json();
-            return (data.items || []).map((item: any) => ({
-              id: item.track?.id as string | undefined,
-              name: (item.track?.name as string) || "",
-              artists: ((item.track?.artists || []) as Array<{ name: string }>).map((a) => a.name),
-              isrc: item.track?.external_ids?.isrc as string | undefined,
-            }));
-          })
-        );
-
-        const savedItems: Array<{
-          id?: string;
-          name: string;
-          artists: string[];
-          isrc?: string;
-        }> = [];
-
-        for (const p of pageResults) {
-          if (p.status === "fulfilled" && Array.isArray(p.value)) {
-            savedItems.push(...p.value);
-          }
-        }
-        return savedItems;
-      } catch (err) {
-        console.warn("[Spotify Liked Tracks] Failed to fetch saved tracks list:", err);
-        return [];
-      }
-    })();
-
-    const [batchResults, userSavedTracks] = await Promise.all([
-      containsPromise,
-      savedTracksPromise,
-    ]);
-
-    // Map boolean results back to their corresponding track IDs
-    batches.forEach((batch, batchIdx) => {
-      const results = batchResults[batchIdx];
-      batch.forEach((id, idIdx) => {
-        likedMap[id] = Boolean(results[idIdx]);
-      });
-    });
-
-    // Cross-reference userSavedTracks against likedMap & tracksContext
-    const userSavedIdSet = new Set(
-      userSavedTracks
-        .map((t) => t.id)
-        .filter((id): id is string => typeof id === "string" && Boolean(id.trim()))
-    );
-
-    // Mark any track directly present in user's saved library
-    for (const savedId of userSavedIdSet) {
-      likedMap[savedId] = true;
-    }
-
-    const cleanArtist = (performingArtist || "").toLowerCase().trim();
-
-    // Cross-match tracksContext with user's saved tracks by title, artist & ISRC
-    if (tracksContext && tracksContext.length > 0) {
-      for (const ct of tracksContext) {
-        const normConcert = normalizeSongTitleForDeduplication(ct.name);
-
-        // Check if primary ID or any candidate ID was found
-        const alreadyMatched =
-          (ct.id && likedMap[ct.id]) ||
-          ct.candidateIds?.some((cid) => likedMap[cid]) ||
-          (ct.id && userSavedIdSet.has(ct.id)) ||
-          ct.candidateIds?.some((cid) => userSavedIdSet.has(cid));
-
-        if (alreadyMatched) {
-          if (ct.id) likedMap[ct.id] = true;
-          ct.candidateIds?.forEach((cid) => {
-            likedMap[cid] = true;
-          });
-          continue;
-        }
-
-        // Deep match by title + artist in user's saved library
-        const foundInLibrary = userSavedTracks.find((saved) => {
-          const normSaved = normalizeSongTitleForDeduplication(saved.name);
-          if (!normSaved || !normConcert) return false;
-
-          const titleMatches =
-            normConcert === normSaved ||
-            normConcert.startsWith(normSaved) ||
-            normSaved.startsWith(normConcert) ||
-            normConcert.includes(normSaved) ||
-            normSaved.includes(normConcert);
-
-          if (!titleMatches) return false;
-
-          // Verify artist matches
-          if (!cleanArtist) return true;
-          return saved.artists.some((a) => {
-            const aLower = a.toLowerCase();
-            return aLower.includes(cleanArtist) || cleanArtist.includes(aLower);
-          });
-        });
-
-        if (foundInLibrary) {
-          if (ct.id) likedMap[ct.id] = true;
-          if (foundInLibrary.id) likedMap[foundInLibrary.id] = true;
-          ct.candidateIds?.forEach((cid) => {
-            likedMap[cid] = true;
-          });
-        }
-      }
-    }
-
-    // Bidirectional sync: if any candidate ID is liked, mark the track's other IDs as liked
-    if (tracksContext) {
-      for (const ct of tracksContext) {
-        const isAnyLiked =
-          (ct.id && likedMap[ct.id]) ||
-          ct.candidateIds?.some((cid) => likedMap[cid]);
-        if (isAnyLiked) {
-          if (ct.id) likedMap[ct.id] = true;
-          ct.candidateIds?.forEach((cid) => {
-            likedMap[cid] = true;
-          });
-        }
-      }
-    }
-
-    const totalChecked = totalConcertTracks;
-    let likedCount = 0;
-
-    if (tracksContext && tracksContext.length > 0) {
-      likedCount = tracksContext.filter((ct) => {
-        if (ct.id && likedMap[ct.id]) return true;
-        if (ct.candidateIds?.some((cid) => likedMap[cid])) return true;
-        return false;
-      }).length;
-    } else {
-      likedCount = Object.values(likedMap).filter(Boolean).length;
-    }
-
-    const readinessPercentage =
-      totalChecked > 0 ? Math.round((likedCount / totalChecked) * 100) : 0;
-
-    try {
-      const fs = await import("fs");
-      fs.appendFileSync(
-        "debug_spotify.log",
-        `[checkUserLikedTracks] Completed check.\n` +
-          `userSavedTracks fetched: ${userSavedTracks.length}\n` +
-          `totalChecked: ${totalChecked}, likedCount: ${likedCount}, readiness: ${readinessPercentage}%\n`
-      );
-    } catch {}
-
-    return {
-      success: true,
-      isGuest: false,
-      needsReauth: false,
-      likedMap,
-      likedCount,
-      totalChecked,
-      readinessPercentage,
-    };
-  } catch (err) {
-    console.error("[Spotify Liked Tracks] Unexpected error during check:", err);
-    const totalChecked = totalConcertTracks;
-    const likedCount = Object.values(likedMap).filter(Boolean).length;
-    const readinessPercentage =
-      totalChecked > 0 ? Math.round((likedCount / totalChecked) * 100) : 0;
-
-    return {
-      success: false,
-      isGuest: false,
-      likedMap,
-      likedCount,
-      totalChecked,
-      readinessPercentage,
-    };
-  }
-}
-
-

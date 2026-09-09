@@ -15,20 +15,14 @@ import {
   AlertCircle,
   TrendingUp,
   Ticket,
-  Pencil,
-  Heart,
-  Target,
-  Trophy,
-  BookOpen,
-  RefreshCw,
   Play,
   Pause,
 } from "lucide-react";
 import { useAudio } from "@/context/AudioContext";
 import { mediumTap } from "@/lib/haptics";
 import { SpotifyPrivacyModal } from "@/components/modals/SpotifyPrivacyModal";
-import type { CheckLikedTracksResponse } from "@/types/spotify";
-import type { NormalizedTrack } from "@/types/setlist";
+import { PlaylistCoverArt } from "@/components/ticket/PlaylistCoverArt";
+import { exportPlaylistCover } from "@/lib/cover-export";
 
 export function StepReview() {
   const {
@@ -49,6 +43,8 @@ export function StepReview() {
     goBack,
     errorMessage,
     savePendingWizardState,
+    coverDataUrl,
+    setCoverDataUrl,
   } = useWizard();
 
   const { isAuthenticated, login } = useAuth();
@@ -70,166 +66,9 @@ export function StepReview() {
     }
   }, [parseResult, stopAudio]);
 
-  // Tour Readiness Score Reactive State
-  const [readinessData, setReadinessData] =
-    useState<CheckLikedTracksResponse | null>(null);
-  const [isScanning, setIsScanning] = useState(false);
-  const [resolvedTracks, setResolvedTracks] = useState<NormalizedTrack[]>(
-    parseResult?.tracks || []
-  );
-
-  // Synchronize resolvedTracks with parseResult
-  useEffect(() => {
-    if (parseResult?.tracks) {
-      setResolvedTracks(parseResult.tracks);
-    }
-  }, [parseResult]);
-
-  // Scan library when Step 3 loads with resolved concert tracks
-  useEffect(() => {
-    if (!parseResult || !parseResult.tracks || parseResult.tracks.length === 0) {
-      return;
-    }
-
-    const currentParseResult = parseResult;
-    let isMounted = true;
-
-    async function loadTourReadiness() {
-      setIsScanning(true);
-      try {
-        let currentTracks = currentParseResult.tracks;
-
-        // If tracks do not have Spotify IDs or candidate IDs yet, resolve them
-        const needsResolution = currentTracks.some(
-          (t) => !t.id || !t.candidateIds || t.candidateIds.length === 0
-        );
-        if (needsResolution) {
-          try {
-            const resolveRes = await fetch("/api/spotify/resolve-tracks", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                tracks: currentTracks,
-                performingArtist:
-                  selectedArtist?.name || currentParseResult.artistName,
-              }),
-            });
-
-            if (resolveRes.ok) {
-              const resolveData = await resolveRes.json();
-              if (resolveData?.tracks && Array.isArray(resolveData.tracks)) {
-                currentTracks = resolveData.tracks;
-                if (isMounted) {
-                  setResolvedTracks(currentTracks);
-                }
-              }
-            }
-          } catch (err) {
-            console.warn("Could not pre-resolve Spotify track IDs:", err);
-          }
-        }
-
-        // Extract all Spotify track IDs (both primary and candidate IDs)
-        const trackIds = Array.from(
-          new Set(
-            currentTracks
-              .flatMap((t) => [t.id, ...(t.candidateIds || [])])
-              .filter(
-                (id): id is string => typeof id === "string" && Boolean(id.trim())
-              )
-          )
-        );
-
-        if (trackIds.length === 0) {
-          if (isMounted) setIsScanning(false);
-          return;
-        }
-
-        // Check liked tracks against user's Spotify library
-        const scanRes = await fetch("/api/spotify/check-liked-tracks", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            trackIds,
-            artistName: selectedArtist?.name || currentParseResult.artistName,
-            tracks: currentTracks,
-          }),
-        });
-
-        if (scanRes.ok) {
-          const scanData: CheckLikedTracksResponse = await scanRes.json();
-          if (isMounted) {
-            setReadinessData(scanData);
-          }
-        }
-      } catch (err) {
-        console.error("Failed to check liked tracks for tour readiness:", err);
-      } finally {
-        if (isMounted) {
-          setIsScanning(false);
-        }
-      }
-    }
-
-    loadTourReadiness();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [parseResult, selectedArtist, isAuthenticated]);
-
   if (!parseResult) {
     return null;
   }
-
-  // Check if a track is liked either by primary Spotify ID or any candidate release ID
-  const isTrackLiked = (t: NormalizedTrack) => {
-    if (
-      !readinessData ||
-      readinessData.isGuest ||
-      !readinessData.likedMap
-    ) {
-      return false;
-    }
-    if (t.id && readinessData.likedMap[t.id]) return true;
-    if (
-      t.candidateIds &&
-      t.candidateIds.some((cid) => readinessData.likedMap[cid])
-    ) {
-      return true;
-    }
-    return false;
-  };
-
-  // Calculate dynamic readiness score based on included/active tracks
-  const activeTracks = resolvedTracks.filter(
-    (_, index) => !excludedTrackIndices.has(index)
-  );
-
-  const displayTotalChecked =
-    activeTracks.length > 0
-      ? activeTracks.length
-      : readinessData?.totalChecked || resolvedTracks.length;
-
-  const displayLikedCount = readinessData?.likedMap
-    ? activeTracks.filter(isTrackLiked).length
-    : readinessData?.likedCount || 0;
-
-  const displayPercentage =
-    displayTotalChecked > 0
-      ? Math.round((displayLikedCount / displayTotalChecked) * 100)
-      : readinessData?.readinessPercentage || 0;
-
-  const displayMissingCount = Math.max(
-    0,
-    displayTotalChecked - displayLikedCount
-  );
-
-  const handleConnectToScan = () => {
-    mediumTap();
-    savePendingWizardState();
-    login();
-  };
 
   const activeTracksCount =
     parseResult.tracks.length - excludedTrackIndices.size;
@@ -253,17 +92,26 @@ export function StepReview() {
 
   const handleOpenSpotifyModal = () => {
     mediumTap();
+    if (!coverDataUrl) {
+      exportPlaylistCover()
+        .then((res) => {
+          if (res?.dataUrl) {
+            setCoverDataUrl(res.dataUrl);
+          }
+        })
+        .catch(() => {});
+    }
     setIsSpotifyModalOpen(true);
   };
 
-  const handleConfirmSpotifyCreate = () => {
+  const handleConfirmSpotifyCreate = (includeCoverImage: boolean) => {
     setIsSpotifyModalOpen(false);
     if (!isAuthenticated) {
       savePendingWizardState();
       login();
       return;
     }
-    createPlaylist();
+    createPlaylist(includeCoverImage);
   };
 
   const handleOpenTicketStub = () => {
@@ -305,18 +153,53 @@ export function StepReview() {
     setIsTicketModalOpen(true);
   };
 
+  const isEssential = parseResult.mode === "essential";
+  const coverArtistName =
+    selectedArtist?.name || parseResult.artistName || "Concert Artist";
+  const coverArtistImageUrl = selectedArtist?.imageUrl || null;
+  const coverTourName =
+    parseResult.tourName ||
+    selectedShow?.tourName ||
+    (isEssential ? "Essential Hits & Fan Favorites" : "Concert Tour");
+  const coverVenueName = isEssential
+    ? "STUDIO DISCOGRAPHY"
+    : selectedShow?.venueName || parseResult.venueInfo || "Main Stage Arena";
+  const coverCityName = isEssential
+    ? "GLOBAL ESSENTIALS"
+    : selectedShow?.cityName || "Global Tour";
+  const coverEventDate = isEssential
+    ? "STUDIO 2026"
+    : selectedShow?.eventDate || "LIVE 2026";
+
   return (
     <div className="space-y-6 animate-in fade-in duration-300 pb-5 sm:pb-6">
+      {/* Offscreen DOM Mounting: 640x640 Tour Poster for Playlist Cover Art Snapshotting */}
+      <div
+        className="fixed -left-[9999px] top-0 pointer-events-none opacity-0 select-none"
+        aria-hidden="true"
+      >
+        <PlaylistCoverArt
+          id="playlist-cover-art"
+          artistName={coverArtistName}
+          artistImageUrl={coverArtistImageUrl}
+          tourName={coverTourName}
+          venueName={coverVenueName}
+          cityName={coverCityName}
+          eventDate={coverEventDate}
+          trackCount={activeTracksCount}
+        />
+      </div>
+
       {/* Top Header with Circular Spotify Back Button & Summary */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-neutral-800/80">
         <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={goBack}
-            className="w-8 h-8 rounded-full bg-black/60 hover:bg-black text-zinc-300 hover:text-white flex items-center justify-center border border-neutral-800 hover:border-neutral-700 transition-all active:scale-[0.95] shrink-0"
+            className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-neutral-300 hover:text-white transition-colors flex items-center justify-center active:scale-[0.95] shrink-0 cursor-pointer"
             title="Back to tour selection"
           >
-            <ChevronLeft className="w-5 h-5 -translate-x-0.5" />
+            <ChevronLeft className="w-4 h-4 -translate-x-0.5" />
           </button>
 
           <div>
@@ -379,7 +262,7 @@ export function StepReview() {
         </div>
 
         {/* Input & Action Buttons Group */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
           {/* Custom Title Input */}
           <div className="flex-1 relative">
             <input
@@ -388,35 +271,24 @@ export function StepReview() {
               value={playlistTitle}
               onChange={(e) => setPlaylistTitle(e.target.value)}
               placeholder="e.g. Travis Scott • Utopia Tour Live 2024"
-              className="w-full h-12 px-4 rounded-xl bg-[#242424] hover:bg-[#2a2a2a] focus:bg-[#282828] border border-neutral-700/70 focus:border-[#1DB954] text-white font-medium text-xs sm:text-sm placeholder-zinc-500 transition-all outline-none"
+              className="w-full h-11 px-4 rounded-xl bg-[#242424] hover:bg-[#2a2a2a] focus:bg-[#282828] border border-neutral-700/70 focus:border-[#1DB954] text-white font-medium text-xs sm:text-sm placeholder-zinc-500 transition-all outline-none"
             />
           </div>
 
-          {/* Action Buttons: Ticket Stub Preview + Spotify Launch + YouTube Export */}
-          <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 sm:gap-2.5 shrink-0">
-            {/* Ticket Stub Button */}
-            <button
-              type="button"
-              onClick={handleOpenTicketStub}
-              className="w-full sm:w-auto sm:min-w-[130px] h-12 px-4 rounded-xl bg-[#242424] hover:bg-[#2e2e2e] text-zinc-200 hover:text-white font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 border border-neutral-700/80 hover:border-neutral-600 transition-all active:scale-[0.97] cursor-pointer whitespace-nowrap"
-              title="Preview and download your concert ticket stub souvenir"
-            >
-              <Ticket className="w-4 h-4 text-[#1DB954] shrink-0" />
-              <span>Ticket Stub</span>
-            </button>
-
-            {/* Spotify Direct Launch Button */}
+          {/* Symmetrical Action Buttons: Spotify + YouTube */}
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Spotify Button */}
             <button
               type="button"
               onClick={handleOpenSpotifyModal}
               disabled={isGenerating || activeTracksCount === 0}
-              className="w-full sm:w-auto sm:min-w-[155px] h-12 px-5 rounded-xl bg-[#1DB954] hover:bg-[#1ed760] disabled:bg-[#1DB954]/50 text-black font-extrabold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg shadow-[#1DB954]/25 active:scale-[0.97] transition-all cursor-pointer disabled:cursor-not-allowed whitespace-nowrap"
+              className="flex-1 sm:flex-none w-full sm:w-28 h-11 px-4 rounded-xl bg-[#1DB954] hover:bg-[#1ed760] disabled:bg-[#1DB954]/50 text-black font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 active:scale-[0.97] transition-all cursor-pointer disabled:cursor-not-allowed whitespace-nowrap"
               title="Create playlist on Spotify"
             >
               {isGenerating ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin text-black shrink-0" />
-                  <span>{generationStatus || "Creating..."}</span>
+                  <span>Creating...</span>
                 </>
               ) : (
                 <>
@@ -427,17 +299,17 @@ export function StepReview() {
                   >
                     <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.498 17.306c-.216.353-.674.467-1.027.25-2.813-1.718-6.354-2.107-10.526-1.155-.403.092-.806-.16-.898-.563-.092-.403.16-.806.563-.898 4.568-1.044 8.484-.606 11.638 1.328.353.216.467.674.25 1.027zm1.467-3.262c-.272.441-.849.582-1.29.31-3.22-1.979-8.128-2.551-11.936-1.394-.497.151-1.029-.133-1.18-.63-.151-.497.133-1.029.63-1.18 4.354-1.322 9.774-.684 13.466 1.583.441.272.582.849.31 1.291zm.126-3.41c-3.861-2.293-10.223-2.504-13.889-1.391-.592.18-1.223-.155-1.403-.747-.18-.592.155-1.223.747-1.403 4.218-1.28 11.238-1.033 15.688 1.609.533.316.707 1.009.391 1.542-.316.533-1.009.707-1.542.391z" />
                   </svg>
-                  <span>Create on Spotify</span>
+                  <span>Spotify</span>
                 </>
               )}
             </button>
 
-            {/* YouTube Quick-Action Button */}
+            {/* YouTube Button */}
             <button
               type="button"
               onClick={handleYouTubeExportClick}
               disabled={isResolvingYouTube || isGenerating || activeTracksCount === 0}
-              className="w-full sm:w-auto sm:min-w-[130px] h-12 px-4 rounded-xl bg-[#FF0000] hover:bg-[#e60000] disabled:bg-[#FF0000]/50 text-white font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-[#FF0000]/20 active:scale-[0.97] transition-all cursor-pointer disabled:cursor-not-allowed whitespace-nowrap"
+              className="flex-1 sm:flex-none w-full sm:w-28 h-11 px-4 rounded-xl bg-[#FF0000] hover:bg-[#e60000] disabled:bg-[#FF0000]/50 text-white font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 active:scale-[0.97] transition-all cursor-pointer disabled:cursor-not-allowed whitespace-nowrap"
               title="Export to YouTube"
             >
               {isResolvingYouTube ? (
@@ -462,187 +334,8 @@ export function StepReview() {
         </div>
       </div>
 
-      {/* Tour Readiness Scorecard Banner */}
-      {isScanning ? (
-        /* Shimmer Loading Skeleton */
-        <div className="bg-white/[0.04] border border-white/10 rounded-xl md:rounded-2xl p-4 md:p-5 mb-4 md:mb-6 animate-pulse">
-          {/* Desktop Skeleton */}
-          <div className="hidden md:flex items-center justify-between gap-6">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-white/10" />
-              <div className="space-y-2">
-                <div className="h-4 w-44 bg-white/10 rounded" />
-                <div className="h-3 w-64 bg-white/5 rounded" />
-              </div>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="w-44 space-y-1.5">
-                <div className="h-3 w-full bg-white/10 rounded" />
-                <div className="h-2.5 w-full bg-white/5 rounded-full" />
-              </div>
-              <div className="h-7 w-36 bg-white/10 rounded-full" />
-            </div>
-          </div>
-
-          {/* Mobile Skeleton */}
-          <div className="md:hidden space-y-2.5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-lg bg-white/10" />
-                <div className="h-3.5 w-32 bg-white/10 rounded" />
-              </div>
-              <div className="h-4 w-16 bg-white/10 rounded-full" />
-            </div>
-            <div className="h-2 w-full bg-white/5 rounded-full" />
-          </div>
-        </div>
-      ) : readinessData?.isGuest ? (
-        /* Guest Mode Experience */
-        <div className="bg-white/[0.04] border border-white/10 rounded-xl md:rounded-2xl p-4 md:p-5 mb-4 md:mb-6 shadow-md backdrop-blur-sm">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-start sm:items-center gap-3.5 min-w-0">
-              <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-[#1DB954]/10 border border-[#1DB954]/20 flex items-center justify-center text-[#1DB954] shrink-0">
-                <Target className="w-5 h-5 md:w-6 md:h-6" />
-              </div>
-              <div className="min-w-0">
-                <h3 className="text-sm md:text-base font-bold text-white tracking-tight">
-                  Want to see how Tour-Ready you are?
-                </h3>
-                <p className="text-xs text-zinc-400 mt-0.5 leading-relaxed">
-                  Connect your Spotify account to scan your Liked Songs against this tour setlist.
-                </p>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleConnectToScan}
-              className="shrink-0 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-full bg-[#1DB954] hover:bg-[#1ed760] text-black font-bold text-xs md:text-sm shadow-md shadow-[#1DB954]/20 active:scale-[0.97] transition-all cursor-pointer whitespace-nowrap"
-            >
-              <svg
-                className="w-4 h-4 fill-black shrink-0"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.498 17.306c-.216.353-.674.467-1.027.25-2.813-1.718-6.354-2.107-10.526-1.155-.403.092-.806-.16-.898-.563-.092-.403.16-.806.563-.898 4.568-1.044 8.484-.606 11.638 1.328.353.216.467.674.25 1.027zm1.467-3.262c-.272.441-.849.582-1.29.31-3.22-1.979-8.128-2.551-11.936-1.394-.497.151-1.029-.133-1.18-.63-.151-.497.133-1.029.63-1.18 4.354-1.322 9.774-.684 13.466 1.583.441.272.582.849.31 1.291zm.126-3.41c-3.861-2.293-10.223-2.504-13.889-1.391-.592.18-1.223-.155-1.403-.747-.18-.592.155-1.223.747-1.403 4.218-1.28 11.238-1.033 15.688 1.609.533.316.707 1.009.391 1.542-.316.533-1.009.707-1.542.391z" />
-              </svg>
-              <span>Connect to Scan Library</span>
-            </button>
-          </div>
-        </div>
-      ) : readinessData ? (
-        /* Authenticated Scorecard Banner (Desktop & Mobile) */
-        <>
-          {/* Desktop Viewport (>= 768px) */}
-          <div className="hidden md:flex items-center justify-between gap-6 bg-white/[0.04] border border-white/10 rounded-2xl p-5 mb-6 shadow-lg backdrop-blur-sm">
-            {/* Left Section */}
-            <div className="flex items-center gap-4 min-w-0">
-              <div className="w-12 h-12 rounded-xl bg-[#1DB954]/10 border border-[#1DB954]/20 flex items-center justify-center text-[#1DB954] shrink-0">
-                <Target className="w-6 h-6" />
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-2.5">
-                  <h3 className="text-base font-bold text-white tracking-tight">
-                    Tour Readiness Score
-                  </h3>
-                  <span className="px-2 py-0.5 rounded-full bg-[#1DB954]/15 border border-[#1DB954]/30 text-[10px] font-bold text-[#1DB954] uppercase tracking-wider">
-                    Live Library Sync
-                  </span>
-                </div>
-                <p className="text-xs text-zinc-300 mt-0.5">
-                  <span className="font-semibold text-white">
-                    {displayLikedCount}
-                  </span>{" "}
-                  of{" "}
-                  <span className="font-semibold text-white">
-                    {displayTotalChecked}
-                  </span>{" "}
-                  concert tracks are saved in your Spotify library
-                </p>
-              </div>
-            </div>
-
-            {/* Right Section */}
-            <div className="flex items-center gap-5 shrink-0">
-              <div className="w-48 space-y-1.5">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-[11px] font-semibold text-zinc-400">
-                    Readiness
-                  </span>
-                  <span className="font-extrabold text-white text-sm">
-                    {displayPercentage}%
-                  </span>
-                </div>
-                <div className="w-full h-2.5 bg-white/10 rounded-full overflow-hidden p-0.5">
-                  <div
-                    className="h-full bg-[#1DB954] rounded-full transition-all duration-700 ease-out shadow-[0_0_12px_rgba(29,185,84,0.4)]"
-                    style={{ width: `${Math.min(displayPercentage, 100)}%` }}
-                  />
-                </div>
-              </div>
-
-              <div className="shrink-0">
-                {displayMissingCount > 0 ? (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-400/10 border border-amber-400/25 text-amber-300 text-xs font-semibold">
-                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                    {displayMissingCount}{" "}
-                    {displayMissingCount === 1 ? "track" : "tracks"} to study
-                    before the show
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#1DB954]/15 border border-[#1DB954]/30 text-[#1DB954] text-xs font-semibold">
-                    <Trophy className="w-3.5 h-3.5 text-[#1DB954]" />
-                    100% Pit-Ready!
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Mobile Viewport (< 768px) */}
-          <div className="md:hidden bg-white/[0.04] border border-white/10 rounded-xl p-4 mb-4 space-y-2.5 shadow-md">
-            {/* Top Row */}
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2 min-w-0">
-                <div className="w-7 h-7 rounded-lg bg-[#1DB954]/15 border border-[#1DB954]/25 flex items-center justify-center text-[#1DB954] shrink-0">
-                  <Target className="w-4 h-4" />
-                </div>
-                <span className="text-sm font-bold text-white tracking-tight truncate">
-                  Tour Readiness:{" "}
-                  <span className="text-[#1DB954]">{displayPercentage}%</span>
-                </span>
-              </div>
-
-              <span className="px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-[11px] font-semibold text-zinc-300 shrink-0">
-                {displayLikedCount}/{displayTotalChecked} songs
-              </span>
-            </div>
-
-            {/* Bottom Row */}
-            <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-[#1DB954] rounded-full transition-all duration-700 ease-out shadow-[0_0_8px_rgba(29,185,84,0.4)]"
-                style={{ width: `${Math.min(displayPercentage, 100)}%` }}
-              />
-            </div>
-
-            {displayMissingCount > 0 && (
-              <div className="flex items-center justify-between text-[11px] text-zinc-400 pt-0.5">
-                <span>
-                  {displayMissingCount}{" "}
-                  {displayMissingCount === 1 ? "track" : "tracks"} to study
-                </span>
-                <span className="text-zinc-500 font-medium">
-                  Synced with Spotify
-                </span>
-              </div>
-            )}
-          </div>
-        </>
-      ) : null}
-
       {/* Spotify Playlist Tracklist Table */}
-      <div className="rounded-2xl bg-[#181818] border border-neutral-800/80 overflow-hidden shadow-xl">
+      <div className="rounded-2xl bg-[#181818] border border-neutral-800/80 overflow-hidden shadow-xl mt-4 sm:mt-6">
         {/* Table Header Row */}
         <div className="grid grid-cols-12 gap-2 px-4 py-3 border-b border-neutral-800/80 text-[11px] font-bold uppercase tracking-wider text-[#B3B3B3]">
           <div className="col-span-1 text-center">#</div>
@@ -661,7 +354,7 @@ export function StepReview() {
 
         {/* Track Rows */}
         <div className="divide-y divide-neutral-800/40">
-          {resolvedTracks.map((track, index) => {
+          {parseResult.tracks.map((track, index) => {
             const isExcluded = excludedTrackIndices.has(index);
             const isCurrentTrack =
               activeTrack?.name.toLowerCase() === track.name.toLowerCase();
@@ -748,29 +441,6 @@ export function StepReview() {
                     >
                       {track.name}
                     </span>
-
-                    {/* Spotify Liked Songs Status Badge */}
-                    {readinessData &&
-                      !readinessData.isGuest &&
-                      (isTrackLiked(track) ? (
-                        <span
-                          className="inline-flex items-center gap-1 text-[#1DB954] shrink-0"
-                          title="Saved in your Spotify Liked Songs"
-                        >
-                          <Heart className="w-3.5 h-3.5 fill-[#1DB954] text-[#1DB954] drop-shadow-[0_0_8px_rgba(29,185,84,0.7)]" />
-                          <span className="hidden sm:inline text-[10px] font-semibold text-[#1DB954]">
-                            Liked
-                          </span>
-                        </span>
-                      ) : (
-                        <span
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-400/10 border border-amber-400/25 text-amber-300 text-[11px] font-medium shrink-0"
-                          title="Not found in your Spotify Liked Songs"
-                        >
-                          <BookOpen className="w-2.5 h-2.5 text-amber-400" />
-                          Need to Study
-                        </span>
-                      ))}
 
                     {track.isCover && (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-950/80 border border-purple-800/50 text-[10px] font-medium text-purple-300 shrink-0">
@@ -862,7 +532,7 @@ export function StepReview() {
                     }}
                     className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${
                       !isExcluded
-                        ? "bg-[#1DB954] text-black hover:bg-[#1ed760] shadow"
+                        ? "bg-[#1DB954] text-black hover:bg-[#1ed760]"
                         : "bg-[#282828] text-zinc-400 hover:bg-[#333333] hover:text-white"
                     }`}
                     title={isExcluded ? "Include in playlist" : "Exclude from playlist"}
@@ -880,8 +550,8 @@ export function StepReview() {
         </div>
       </div>
 
-      {/* Primary & Secondary Action Section: Inline at the end of the setlist */}
-      <div className="mt-8 flex flex-col items-center justify-center text-center space-y-3">
+      {/* Primary & Secondary Action Section: Inline Clean Button Ladder */}
+      <div className="mt-8 flex flex-col items-center justify-center text-center">
         {/* Track selection summary counter */}
         <div className="flex items-center gap-2 text-xs text-[#B3B3B3]">
           <span>{activeTracksCount} of {parseResult.tracks.length} tracks selected</span>
@@ -889,50 +559,45 @@ export function StepReview() {
           <span>Est. playlist duration: ~{activeTracksCount * 4} min</span>
         </div>
 
-        {/* Action Buttons Container */}
-        <div className="w-full max-w-md flex flex-col items-stretch gap-3">
-          {/* Dedicated YouTube Export Section: Zero Login Required */}
-          <div className="flex flex-col items-center gap-1.5 w-full">
-            <button
-              type="button"
-              onClick={handleYouTubeExportClick}
-              disabled={isResolvingYouTube || isGenerating || activeTracksCount === 0}
-              className="w-full min-h-[44px] inline-flex items-center justify-center gap-3 px-8 py-3.5 sm:py-4 rounded-full bg-[#FF0000] hover:bg-[#E60000] disabled:bg-[#FF0000]/50 text-white font-extrabold text-sm sm:text-base shadow-xl shadow-[#FF0000]/25 hover:shadow-[#FF0000]/40 active:scale-[0.98] transition-all cursor-pointer disabled:cursor-not-allowed"
-            >
-              {isResolvingYouTube ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin text-white shrink-0" />
-                  <span>Resolving YouTube audio tracks...</span>
-                </>
-              ) : (
-                <>
-                  {/* Official YouTube Play Icon SVG */}
-                  <svg
-                    className="w-5 h-5 fill-white shrink-0"
-                    viewBox="0 0 24 24"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
-                  </svg>
-                  <span>Export to YouTube</span>
-                </>
-              )}
-            </button>
-            <span className="text-[11px] text-zinc-400 font-medium">
-              Zero login required • Works for all users
-            </span>
-          </div>
+        {/* Action Buttons: Clean Vertical Ladder */}
+        <div className="flex flex-col gap-3 w-full max-w-md mx-auto mt-6">
+          {/* Rung 1: Export to YouTube */}
+          <button
+            type="button"
+            onClick={handleYouTubeExportClick}
+            disabled={isResolvingYouTube || isGenerating || activeTracksCount === 0}
+            className="w-full h-12 inline-flex items-center justify-center gap-2.5 px-6 rounded-xl bg-[#FF0000] hover:bg-[#e60000] disabled:bg-[#FF0000]/50 text-white font-semibold text-sm sm:text-base active:scale-[0.98] transition-all cursor-pointer disabled:cursor-not-allowed"
+          >
+            {isResolvingYouTube ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin text-white shrink-0" />
+                <span>Resolving YouTube audio tracks...</span>
+              </>
+            ) : (
+              <>
+                {/* Official YouTube Play Icon SVG */}
+                <svg
+                  className="w-5 h-5 fill-white shrink-0"
+                  viewBox="0 0 24 24"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+                </svg>
+                <span>Export to YouTube</span>
+              </>
+            )}
+          </button>
 
-          {/* Prominent Spotify Button */}
+          {/* Rung 2: Create Spotify Playlist */}
           <button
             type="button"
             onClick={handleOpenSpotifyModal}
             disabled={isGenerating || isResolvingYouTube || activeTracksCount === 0}
-            className="w-full min-h-[44px] inline-flex items-center justify-center gap-3 px-8 py-3.5 sm:py-4 rounded-full bg-[#1DB954] hover:bg-[#1ed760] disabled:bg-[#1DB954]/50 text-black font-extrabold text-sm sm:text-base shadow-xl shadow-[#1DB954]/25 hover:shadow-[#1DB954]/40 active:scale-[0.98] transition-all cursor-pointer disabled:cursor-not-allowed"
+            className="w-full h-12 inline-flex items-center justify-center gap-2.5 px-6 rounded-xl bg-[#1DB954] hover:bg-[#1ed760] disabled:bg-[#1DB954]/50 text-black font-semibold text-sm sm:text-base active:scale-[0.98] transition-all cursor-pointer disabled:cursor-not-allowed"
           >
             {isGenerating ? (
               <>
-                <Loader2 className="w-5 h-5 animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin text-black" />
                 <span>Building Spotify Playlist...</span>
               </>
             ) : (
@@ -954,23 +619,16 @@ export function StepReview() {
             )}
           </button>
 
-          {/* Prominent Secondary Action Button: Customize & Download Ticket Stub */}
+          {/* Rung 3: Customize & Download Ticket Stub */}
           <button
             type="button"
             onClick={handleOpenTicketStub}
-            className="w-full min-h-[44px] inline-flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-full bg-white/5 hover:bg-white/10 active:bg-white/15 border border-white/15 hover:border-white/25 text-white font-bold text-sm sm:text-base shadow-lg backdrop-blur-md active:scale-[0.98] transition-all cursor-pointer"
+            className="w-full h-12 inline-flex items-center justify-center gap-2.5 px-6 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] border border-white/10 text-white font-medium text-sm sm:text-base active:scale-[0.98] transition-all cursor-pointer"
           >
-            <Ticket className="w-5 h-5 text-[#1DB954] shrink-0" />
+            <Ticket className="w-4 h-4 text-[#1DB954] shrink-0" />
             <span>Customize & Download Ticket Stub</span>
           </button>
         </div>
-
-        {/* Subtle helper line with compact bottom margin */}
-        <p className="text-xs text-zinc-500 font-medium mb-1">
-          {isAuthenticated
-            ? "Playlists will be saved directly to your music library"
-            : "Free instant ticket stubs & YouTube export • Connect Spotify anytime to sync playlists"}
-        </p>
       </div>
 
       {/* Ticket Modal instance when previewing/customizing stub */}
@@ -1010,6 +668,40 @@ export function StepReview() {
         />
       )}
 
+      {/* Hidden Offscreen Cover Art for Snapshot/Upload */}
+      <div
+        className="fixed -left-[9999px] top-0 pointer-events-none opacity-0 select-none overflow-hidden"
+        style={{ width: "640px", height: "640px" }}
+        aria-hidden="true"
+      >
+        <PlaylistCoverArt
+          id="playlist-cover-art"
+          artistName={selectedArtist?.name || parseResult.artistName || "Concert Artist"}
+          artistImageUrl={selectedArtist?.imageUrl || null}
+          tourName={
+            parseResult.tourName ||
+            selectedShow?.tourName ||
+            (parseResult.mode === "essential" ? "Essential Hits & Fan Favorites" : "World Tour")
+          }
+          venueName={
+            parseResult.mode === "essential"
+              ? "STUDIO DISCOGRAPHY"
+              : selectedShow?.venueName || parseResult.venueInfo || "Main Stage Arena"
+          }
+          cityName={
+            parseResult.mode === "essential"
+              ? "GLOBAL ESSENTIALS"
+              : selectedShow?.cityName || "Live Tour"
+          }
+          eventDate={
+            parseResult.mode === "essential"
+              ? "STUDIO 2026"
+              : selectedShow?.eventDate || "LIVE 2026"
+          }
+          trackCount={activeTracksCount}
+        />
+      </div>
+
       {/* Spotify Privacy Modal */}
       <SpotifyPrivacyModal
         isOpen={isSpotifyModalOpen}
@@ -1020,6 +712,7 @@ export function StepReview() {
         setIsPublic={setIsPublic}
         onConfirm={handleConfirmSpotifyCreate}
         isGenerating={isGenerating}
+        coverDataUrl={coverDataUrl}
       />
     </div>
   );

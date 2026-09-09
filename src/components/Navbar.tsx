@@ -20,7 +20,7 @@ export function Navbar() {
           onClick={() => setActiveTab("setlists")}
           className="flex items-center gap-2.5 cursor-pointer text-left outline-none group shrink-0"
         >
-          <StagePassLogo className="w-8 h-8 drop-shadow-[0_0_8px_rgba(29,185,84,0.35)] group-hover:scale-105 group-hover:drop-shadow-[0_0_12px_rgba(29,185,84,0.55)] transition-all shrink-0" />
+          <StagePassLogo className="w-8 h-8 group-hover:scale-105 transition-all shrink-0" />
 
           <div className="flex items-center gap-2">
             <span className="font-bold text-lg sm:text-xl tracking-tight text-white group-hover:text-[#1DB954] transition-colors">
@@ -129,7 +129,7 @@ export function Navbar() {
               <button
                 type="button"
                 onClick={login}
-                className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#1DB954] hover:bg-[#1ed760] text-black text-xs font-extrabold shadow-md shadow-[#1DB954]/20 hover:shadow-[#1DB954]/35 active:scale-[0.97] transition-all cursor-pointer"
+                className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#1DB954] hover:bg-[#1ed760] text-black text-xs font-semibold active:scale-[0.97] transition-all cursor-pointer"
                 title="Connect Spotify to save playlists to your personal library"
               >
                 <svg

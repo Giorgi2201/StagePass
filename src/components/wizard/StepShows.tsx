@@ -96,14 +96,14 @@ export function StepShows() {
       {/* Top Header with Circular Spotify Back Button & Artist Badge */}
       <div className="flex items-center justify-between pb-2 border-b border-neutral-800/80">
         <div className="flex items-center gap-3">
-          {/* Spotify Circular Back Button */}
+          {/* Spotify Subtle Circular Back Button */}
           <button
             type="button"
             onClick={goBack}
-            className="w-8 h-8 rounded-full bg-black/60 hover:bg-black text-zinc-300 hover:text-white flex items-center justify-center border border-neutral-800 hover:border-neutral-700 transition-all active:scale-[0.95]"
+            className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-neutral-300 hover:text-white transition-colors flex items-center justify-center active:scale-[0.95] cursor-pointer shrink-0"
             title="Go back to search"
           >
-            <ChevronLeft className="w-5 h-5 -translate-x-0.5" />
+            <ChevronLeft className="w-4 h-4 -translate-x-0.5" />
           </button>
 
           <div>
@@ -180,7 +180,7 @@ export function StepShows() {
               type="button"
               onClick={() => generateEssentialHits()}
               disabled={isLoadingParse}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-7 py-3.5 rounded-full bg-[#1DB954] hover:bg-[#1ed760] disabled:bg-[#1DB954]/50 text-black font-extrabold text-sm shadow-xl shadow-[#1DB954]/25 active:scale-[0.98] transition-all cursor-pointer disabled:cursor-not-allowed"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-7 py-3.5 rounded-full bg-[#1DB954] hover:bg-[#1ed760] disabled:bg-[#1DB954]/50 text-black font-semibold text-sm active:scale-[0.98] transition-all cursor-pointer disabled:cursor-not-allowed"
             >
               {isLoadingParse ? (
                 <>
@@ -233,7 +233,7 @@ export function StepShows() {
                     type="button"
                     onClick={() => generateRehearsalSetlist()}
                     disabled={isLoadingParse}
-                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-8 py-3.5 rounded-full bg-[#1DB954] hover:bg-[#1ed760] disabled:bg-[#1DB954]/50 text-black font-extrabold text-sm sm:text-base shadow-lg shadow-[#1DB954]/25 active:scale-[0.98] transition-all cursor-pointer disabled:cursor-not-allowed"
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-8 py-3.5 rounded-full bg-[#1DB954] hover:bg-[#1ed760] disabled:bg-[#1DB954]/50 text-black font-semibold text-sm sm:text-base active:scale-[0.98] transition-all cursor-pointer disabled:cursor-not-allowed"
                   >
                     {isLoadingParse ? (
                       <>

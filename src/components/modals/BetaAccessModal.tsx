@@ -192,7 +192,7 @@ export function BetaAccessModal() {
                 <button
                   type="button"
                   onClick={handleOpenTicketStub}
-                  className="w-full inline-flex items-center justify-center gap-2.5 px-5 py-3 rounded-xl bg-[#1DB954] hover:bg-[#1ed760] text-black font-extrabold text-sm shadow-lg shadow-[#1DB954]/25 active:scale-[0.98] transition-all cursor-pointer"
+                  className="w-full inline-flex items-center justify-center gap-2.5 px-5 py-3 rounded-xl bg-[#1DB954] hover:bg-[#1ed760] text-black font-semibold text-sm active:scale-[0.98] transition-all cursor-pointer"
                 >
                   <Ticket className="w-4 h-4 text-black" />
                   <span>Customize & Download Ticket Stub Instead</span>

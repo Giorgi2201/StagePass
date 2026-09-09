@@ -4,6 +4,7 @@ import {
   addTracksToPlaylist,
   batchMatchTracks,
   createSpotifyPlaylist,
+  uploadPlaylistCoverImage,
 } from "@/lib/spotify";
 import type {
   CreatePlaylistRequest,
@@ -40,7 +41,10 @@ export async function POST(request: Request) {
     description = "Generated with StagePass",
     isPublic = false,
     performingArtist,
+    artistMbid,
+    artistSpotifyId,
     tracks,
+    coverImageBase64,
   } = body;
 
   if (!concertTitle || !concertTitle.trim()) {
@@ -65,12 +69,14 @@ export async function POST(request: Request) {
   }
 
   try {
-    // 3. Match tracks on Spotify with controlled concurrency
+    // 3. Match tracks on Spotify with controlled concurrency & catalog strategy
     const matchResults = await batchMatchTracks(
       tracks,
       performingArtist.trim(),
       session.accessToken,
-      5
+      5,
+      artistMbid,
+      artistSpotifyId
     );
 
     const matchedUris: string[] = [];
@@ -107,6 +113,34 @@ export async function POST(request: Request) {
     // 6. Add the resolved track URIs in chunks of up to 100
     await addTracksToPlaylist(playlist.id, matchedUris, session.accessToken);
 
+    // 6.5. Resilient cover art upload decoupling (failsafe: does not fail playlist creation)
+    let coverUploaded: boolean | undefined = undefined;
+    if (coverImageBase64) {
+      try {
+        const uploadSuccess = await uploadPlaylistCoverImage(
+          playlist.id,
+          coverImageBase64,
+          session.accessToken
+        );
+        coverUploaded = uploadSuccess;
+        if (uploadSuccess) {
+          console.log(
+            `[Spotify API] Custom cover art uploaded successfully for playlist ${playlist.id}`
+          );
+        } else {
+          console.warn(
+            `[Spotify API] Custom cover upload failed for playlist ${playlist.id}, playlist created successfully`
+          );
+        }
+      } catch (coverErr) {
+        console.warn(
+          `[Spotify API] Non-fatal error during cover upload for playlist ${playlist.id}:`,
+          coverErr
+        );
+        coverUploaded = false;
+      }
+    }
+
     // 7. Return complete playlist metadata and statistics
     const responsePayload: CreatePlaylistResponse = {
       success: true,
@@ -117,6 +151,7 @@ export async function POST(request: Request) {
       matchedCount: matchedUris.length,
       totalRequested: tracks.length,
       unmatchedTracks,
+      coverUploaded,
     };
 
     return NextResponse.json(responsePayload, { status: 201 });

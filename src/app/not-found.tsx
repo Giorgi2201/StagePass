@@ -36,7 +36,7 @@ export default function NotFound() {
         <div className="pt-2">
           <Link
             href="/"
-            className="inline-flex items-center justify-center gap-2.5 px-7 py-3 rounded-full bg-[#1DB954] hover:bg-[#1ed760] text-black font-extrabold text-sm shadow-xl shadow-[#1DB954]/25 active:scale-[0.98] transition-all cursor-pointer"
+            className="inline-flex items-center justify-center gap-2.5 px-7 py-3 rounded-full bg-[#1DB954] hover:bg-[#1ed760] text-black font-semibold text-sm active:scale-[0.98] transition-all cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4 stroke-[2.5]" />
             <span>Return to StagePass</span>

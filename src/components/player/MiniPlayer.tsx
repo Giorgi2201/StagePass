@@ -138,7 +138,7 @@ export function MiniPlayer() {
             {/* Hairline Curved Progress Bar at Bottom of Pill */}
             <div className="absolute bottom-0 left-3 right-3 h-[2px] bg-white/10 overflow-hidden rounded-full pointer-events-none">
               <div
-                className="h-full bg-[#1DB954] transition-all duration-100 ease-linear rounded-full shadow-[0_0_8px_rgba(29,185,84,0.6)]"
+                className="h-full bg-[#1DB954] transition-all duration-100 ease-linear rounded-full"
                 style={{
                   width: `${Math.min(Math.max(progress * 100, 0), 100)}%`,
                 }}
@@ -227,7 +227,7 @@ export function MiniPlayer() {
                 title="Click to seek preview"
               >
                 <div
-                  className="h-full bg-white group-hover:bg-[#1DB954] transition-colors rounded-full shadow-[0_0_8px_rgba(29,185,84,0.5)]"
+                  className="h-full bg-white group-hover:bg-[#1DB954] transition-colors rounded-full"
                   style={{
                     width: `${Math.min(Math.max(progress * 100, 0), 100)}%`,
                   }}

@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Lock, Globe, Loader2, Music2 } from "lucide-react";
+import { X, Lock, Globe, Loader2, Music2, Image as ImageIcon } from "lucide-react";
 import { mediumTap, tickHaptic } from "@/lib/haptics";
+import { exportPlaylistCover } from "@/lib/cover-export";
 
 export interface SpotifyPrivacyModalProps {
   isOpen: boolean;
@@ -12,8 +13,9 @@ export interface SpotifyPrivacyModalProps {
   trackCount: number;
   isPublic: boolean;
   setIsPublic: (isPublic: boolean) => void;
-  onConfirm: () => void;
+  onConfirm: (includeCoverImage: boolean) => void;
   isGenerating?: boolean;
+  coverDataUrl?: string | null;
 }
 
 export function SpotifyPrivacyModal({
@@ -25,7 +27,36 @@ export function SpotifyPrivacyModal({
   setIsPublic,
   onConfirm,
   isGenerating = false,
+  coverDataUrl,
 }: SpotifyPrivacyModalProps) {
+  const [includeCoverImage, setIncludeCoverImage] = useState<boolean>(true);
+  const [liveCoverUrl, setLiveCoverUrl] = useState<string | null>(coverDataUrl || null);
+
+  // Sync or dynamically snapshot live cover preview thumbnail when modal opens
+  useEffect(() => {
+    if (coverDataUrl) {
+      setLiveCoverUrl(coverDataUrl);
+      return;
+    }
+
+    if (isOpen) {
+      let isSubscribed = true;
+      exportPlaylistCover()
+        .then((res) => {
+          if (isSubscribed && res?.dataUrl) {
+            setLiveCoverUrl(res.dataUrl);
+          }
+        })
+        .catch(() => {
+          // Offscreen canvas not available yet; thumbnail fallback displays
+        });
+
+      return () => {
+        isSubscribed = false;
+      };
+    }
+  }, [isOpen, coverDataUrl]);
+
   // Close on Escape key press
   useEffect(() => {
     if (!isOpen) return;
@@ -48,9 +79,14 @@ export function SpotifyPrivacyModal({
     setIsPublic(true);
   };
 
+  const handleToggleCover = () => {
+    tickHaptic();
+    setIncludeCoverImage((prev) => !prev);
+  };
+
   const handleConfirmClick = () => {
     mediumTap();
-    onConfirm();
+    onConfirm(includeCoverImage);
   };
 
   return (
@@ -72,7 +108,7 @@ export function SpotifyPrivacyModal({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 10 }}
             transition={{ type: "spring", duration: 0.3, bounce: 0 }}
-            className="relative w-full max-w-md bg-[#161616] border border-neutral-800 rounded-3xl p-6 sm:p-7 shadow-2xl z-10 space-y-6 text-left"
+            className="relative w-full max-w-md bg-[#161616] border border-neutral-800 rounded-3xl p-6 sm:p-7 shadow-2xl z-10 space-y-5 text-left"
           >
             {/* Close Button */}
             <button
@@ -101,27 +137,91 @@ export function SpotifyPrivacyModal({
                   Create Spotify Playlist
                 </h3>
                 <p className="text-xs text-[#B3B3B3]">
-                  Select your playlist visibility before saving
+                  Configure artwork and visibility before saving
                 </p>
               </div>
             </div>
 
-            {/* Playlist Summary Card */}
-            <div className="p-3.5 rounded-2xl bg-black/40 border border-neutral-800/80 space-y-1">
-              <div className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
-                Playlist Preview
+            {/* =========================================================
+                1. LIVE COVER ART PREVIEW & PLAYLIST SUMMARY
+               ========================================================= */}
+            <div className="p-3.5 rounded-2xl bg-black/40 border border-neutral-800/80 flex items-center gap-3.5">
+              {/* Square Tour Poster Thumbnail */}
+              <div className="relative w-20 h-20 md:w-24 md:h-24 rounded-xl overflow-hidden border border-white/10 shadow-lg shrink-0 bg-neutral-900 flex items-center justify-center">
+                {liveCoverUrl ? (
+                  <img
+                    src={liveCoverUrl}
+                    alt="Tour Poster Preview"
+                    className={`w-full h-full object-cover transition-opacity duration-200 ${
+                      includeCoverImage ? "opacity-100" : "opacity-35 grayscale"
+                    }`}
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center text-center p-2 text-zinc-500">
+                    <ImageIcon className="w-6 h-6 text-[#1DB954]/60 mb-1" />
+                    <span className="text-[9px] uppercase font-bold tracking-wider">
+                      Tour Cover
+                    </span>
+                  </div>
+                )}
+                {!includeCoverImage && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/60 p-1 text-center">
+                    <span className="text-[9px] font-bold text-neutral-300 uppercase leading-tight">
+                      Default Mosaic
+                    </span>
+                  </div>
+                )}
               </div>
-              <div className="text-sm font-extrabold text-white truncate">
-                {playlistTitle || "Live Concert Setlist"}
-              </div>
-              <div className="flex items-center gap-1.5 text-xs text-[#1DB954] font-medium pt-0.5">
-                <Music2 className="w-3.5 h-3.5" />
-                <span>{trackCount} tracks queued</span>
+
+              {/* Title & Metadata */}
+              <div className="flex-1 min-w-0 space-y-1">
+                <div className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+                  Playlist Preview
+                </div>
+                <div className="text-sm sm:text-base font-extrabold text-white truncate">
+                  {playlistTitle || "Live Concert Setlist"}
+                </div>
+                <div className="flex items-center gap-1.5 text-xs text-[#1DB954] font-medium pt-0.5">
+                  <Music2 className="w-3.5 h-3.5 shrink-0" />
+                  <span>{trackCount} tracks queued</span>
+                </div>
               </div>
             </div>
 
-            {/* Privacy Segmented Control */}
-            <div className="space-y-2.5">
+            {/* =========================================================
+                2. ARTWORK TOGGLE SWITCH ROW
+               ========================================================= */}
+            <div className="p-3.5 rounded-2xl bg-[#1c1c1c] border border-neutral-800 flex items-center justify-between gap-3">
+              <div className="space-y-0.5 min-w-0">
+                <div className="text-xs font-bold text-white tracking-wide">
+                  Apply Custom Tour Poster Cover
+                </div>
+                <div className="text-[11px] text-[#B3B3B3] leading-relaxed">
+                  Replaces Spotify&apos;s default 4-album mosaic with this official tour release artwork
+                </div>
+              </div>
+
+              <button
+                type="button"
+                role="switch"
+                aria-checked={includeCoverImage}
+                onClick={handleToggleCover}
+                className={`w-11 h-6 rounded-full transition-colors flex items-center p-0.5 shrink-0 cursor-pointer ${
+                  includeCoverImage ? "bg-[#1DB954]" : "bg-neutral-700"
+                }`}
+              >
+                <span
+                  className={`w-5 h-5 rounded-full bg-white shadow-md transform transition-transform ${
+                    includeCoverImage ? "translate-x-5" : "translate-x-0"
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* =========================================================
+                3. PRIVACY SEGMENTED CONTROL
+               ========================================================= */}
+            <div className="space-y-2">
               <label className="text-xs font-semibold uppercase tracking-wider text-zinc-400 block">
                 Playlist Visibility
               </label>
@@ -133,7 +233,7 @@ export function SpotifyPrivacyModal({
                   onClick={handleSelectPrivate}
                   className={`h-full rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
                     !isPublic
-                      ? "bg-[#1DB954] text-black shadow-md"
+                      ? "bg-[#1DB954] text-black font-semibold"
                       : "text-zinc-400 hover:text-white"
                   }`}
                 >
@@ -147,7 +247,7 @@ export function SpotifyPrivacyModal({
                   onClick={handleSelectPublic}
                   className={`h-full rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
                     isPublic
-                      ? "bg-[#1DB954] text-black shadow-md"
+                      ? "bg-[#1DB954] text-black font-semibold"
                       : "text-zinc-400 hover:text-white"
                   }`}
                 >
@@ -164,13 +264,15 @@ export function SpotifyPrivacyModal({
               </p>
             </div>
 
-            {/* Modal Actions */}
+            {/* =========================================================
+                4. MODAL ACTIONS
+               ========================================================= */}
             <div className="pt-2 space-y-2.5">
               <button
                 type="button"
                 onClick={handleConfirmClick}
                 disabled={isGenerating || trackCount === 0}
-                className="w-full h-11 rounded-xl bg-[#1DB954] hover:bg-[#1ed760] disabled:bg-[#1DB954]/50 text-black font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg shadow-[#1DB954]/20 active:scale-[0.98] transition-all cursor-pointer disabled:cursor-not-allowed"
+                className="w-full h-11 rounded-xl bg-[#1DB954] hover:bg-[#1ed760] disabled:bg-[#1DB954]/50 text-black font-semibold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-all cursor-pointer disabled:cursor-not-allowed"
               >
                 {isGenerating ? (
                   <>

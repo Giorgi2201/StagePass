@@ -150,7 +150,7 @@ export function StepSearch() {
             }}
             className={`px-4 py-2 rounded-full text-xs sm:text-sm font-bold transition-all active:scale-[0.97] flex items-center gap-2 cursor-pointer ${
               mode === "rehearsal"
-                ? "bg-[#1DB954] text-black shadow-lg shadow-[#1DB954]/25"
+                ? "bg-[#1DB954] text-black font-semibold"
                 : "bg-[#282828] hover:bg-[#333333] text-white"
             }`}
           >
@@ -167,7 +167,7 @@ export function StepSearch() {
             }}
             className={`px-4 py-2 rounded-full text-xs sm:text-sm font-bold transition-all active:scale-[0.97] flex items-center gap-2 cursor-pointer ${
               mode === "memory"
-                ? "bg-[#1DB954] text-black shadow-lg shadow-[#1DB954]/25"
+                ? "bg-[#1DB954] text-black font-semibold"
                 : "bg-[#282828] hover:bg-[#333333] text-white"
             }`}
           >

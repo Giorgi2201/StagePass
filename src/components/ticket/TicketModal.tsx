@@ -436,7 +436,7 @@ export function TicketModal({
               type="button"
               onClick={handleShare}
               disabled={isSharing || isDownloading || isCopying}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-[#1DB954] hover:bg-[#1ed760] disabled:bg-[#1DB954]/50 text-black font-extrabold text-xs sm:text-sm shadow-lg shadow-[#1DB954]/25 transition-all cursor-pointer active:scale-[0.98]"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-[#1DB954] hover:bg-[#1ed760] disabled:bg-[#1DB954]/50 text-black font-semibold text-xs sm:text-sm transition-all cursor-pointer active:scale-[0.98]"
             >
               {isSharing ? (
                 <>

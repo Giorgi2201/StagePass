@@ -165,3 +165,14 @@ trackIds count: 10, concert tracks count: 22
 session present: false
 user: none
 Returning isGuest: true
+
+[2026-09-09T16:22:44.646Z] /api/spotify/check-liked-tracks called.
+artist: Kendrick Lamar
+trackIds count: 5, concert tracks count: 21
+session present: true
+user: 31nvgrxqqoesyijiifnar6ef3qpu
+[checkUserLikedTracks] Completed check.
+userSavedTracks fetched: 50
+totalChecked: 21, likedCount: 0, readiness: 0%
+checkUserLikedTracks result: success=true, needsReauth=false, likedCount=0, totalChecked=21, readinessPercentage=0
+sample likedMap entries: [["77DRzu7ERs0TX3roZcre7Q",false],["3QFInJAm9eyaho5vBzxInN",false],["7Bpx2vsWfQFBACRz4h3IqH",false],["2Tj9aHtf7g8ydYqsB6S9M5",false],["76lVWU084mEPxGuRwxHE1K",false]]

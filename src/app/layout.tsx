@@ -64,8 +64,9 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} dark antialiased bg-[#121212] text-zinc-100`}
+      suppressHydrationWarning
     >
-      <body className="min-h-screen bg-[#121212] text-zinc-100 flex flex-col font-sans selection:bg-[#1DB954]/30 selection:text-white">
+      <body suppressHydrationWarning>
         <AuthProvider>
           <NavigationProvider>
             <AudioProvider>

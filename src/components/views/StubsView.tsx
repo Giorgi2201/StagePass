@@ -90,7 +90,7 @@ export function StubsView() {
               mediumTap();
               setActiveTab("setlists");
             }}
-            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-[#1DB954] hover:bg-[#1ed760] text-black font-extrabold text-xs shadow-lg shadow-[#1DB954]/20 active:scale-[0.98] transition-all cursor-pointer shrink-0 self-start sm:self-auto"
+            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-[#1DB954] hover:bg-[#1ed760] text-black font-semibold text-xs active:scale-[0.98] transition-all cursor-pointer shrink-0 self-start sm:self-auto"
           >
             <Sparkles className="w-3.5 h-3.5" />
             <span>Add Another Concert</span>
@@ -135,7 +135,7 @@ export function StubsView() {
         /* Empty State */
         <div className="p-8 sm:p-14 rounded-2xl bg-gradient-to-b from-[#1c1c1c] via-[#141414] to-[#101010] border border-neutral-800 text-center space-y-6 max-w-md mx-auto shadow-2xl">
           <div className="relative w-20 h-20 mx-auto flex items-center justify-center">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-amber-500/20 to-purple-500/20 border border-amber-500/30 flex items-center justify-center shadow-lg shadow-amber-500/10 rotate-3">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-amber-500/20 to-purple-500/20 border border-amber-500/30 flex items-center justify-center rotate-3">
               <Ticket className="w-8 h-8 text-amber-400 -rotate-3" />
             </div>
             <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-[#1DB954] text-black flex items-center justify-center font-bold text-xs shadow-md">
@@ -159,7 +159,7 @@ export function StubsView() {
                 mediumTap();
                 setActiveTab("setlists");
               }}
-              className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-full bg-[#1DB954] hover:bg-[#1ed760] text-black font-extrabold text-sm shadow-xl shadow-[#1DB954]/25 active:scale-[0.98] transition-all cursor-pointer"
+              className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-full bg-[#1DB954] hover:bg-[#1ed760] text-black font-semibold text-sm active:scale-[0.98] transition-all cursor-pointer"
             >
               <span>Find Your Next Concert</span>
               <ArrowRight className="w-4 h-4" />

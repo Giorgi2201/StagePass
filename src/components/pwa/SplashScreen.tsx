@@ -10,11 +10,9 @@ export function SplashScreen() {
     >
       {/* Centered Brand Content */}
       <div className="flex flex-col items-center text-center px-6">
-        {/* Ticket Logo Badge with Soft Ambient Glow */}
+        {/* Ticket Logo Badge */}
         <div className="relative mb-6">
-          <div className="absolute -inset-4 bg-[#1DB954]/20 rounded-full blur-2xl animate-pulse" />
-
-          <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-gradient-to-tr from-[#1DB954] via-emerald-400 to-[#1ed760] p-[2px] flex items-center justify-center shadow-2xl shadow-[#1DB954]/30">
+          <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-gradient-to-tr from-[#1DB954] via-emerald-400 to-[#1ed760] p-[2px] flex items-center justify-center shadow-2xl">
             <div className="w-full h-full bg-[#121212] rounded-[14px] flex items-center justify-center">
               <Ticket className="w-9 h-9 sm:w-11 sm:h-11 text-[#1DB954]" />
             </div>
@@ -34,10 +32,10 @@ export function SplashScreen() {
           className="flex items-end justify-center gap-1.5 h-7"
           aria-label="Loading audio visualizer"
         >
-          <span className="w-1.5 h-6 bg-[#1DB954] rounded-full animate-eq-1 shadow-sm shadow-[#1DB954]/50" />
-          <span className="w-1.5 h-6 bg-[#1DB954] rounded-full animate-eq-2 shadow-sm shadow-[#1DB954]/50" />
-          <span className="w-1.5 h-6 bg-[#1DB954] rounded-full animate-eq-3 shadow-sm shadow-[#1DB954]/50" />
-          <span className="w-1.5 h-6 bg-[#1DB954] rounded-full animate-eq-4 shadow-sm shadow-[#1DB954]/50" />
+          <span className="w-1.5 h-6 bg-[#1DB954] rounded-full animate-eq-1" />
+          <span className="w-1.5 h-6 bg-[#1DB954] rounded-full animate-eq-2" />
+          <span className="w-1.5 h-6 bg-[#1DB954] rounded-full animate-eq-3" />
+          <span className="w-1.5 h-6 bg-[#1DB954] rounded-full animate-eq-4" />
         </div>
       </div>
 

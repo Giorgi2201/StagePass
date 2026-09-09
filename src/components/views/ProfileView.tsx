@@ -140,7 +140,7 @@ export function ProfileView() {
                 />
               </div>
             ) : (
-              <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-[#1DB954] to-emerald-600 flex items-center justify-center text-xl font-black text-black shrink-0 shadow-lg shadow-[#1DB954]/20">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-[#1DB954] to-emerald-600 flex items-center justify-center text-xl font-black text-black shrink-0">
                 {user.displayName.charAt(0).toUpperCase()}
               </div>
             )}
@@ -340,7 +340,7 @@ export function ProfileView() {
           <button
             type="button"
             onClick={login}
-            className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-full bg-[#1DB954] hover:bg-[#1ed760] text-black font-extrabold text-sm shadow-xl shadow-[#1DB954]/25 transition-all cursor-pointer"
+            className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-full bg-[#1DB954] hover:bg-[#1ed760] text-black font-semibold text-sm transition-all cursor-pointer"
           >
             <span>Connect with Spotify</span>
           </button>

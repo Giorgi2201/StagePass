@@ -35,9 +35,9 @@ export async function GET(request: Request) {
   const scopes = [
     "user-read-private",
     "user-read-email",
-    "user-library-read",
     "playlist-modify-public",
     "playlist-modify-private",
+    "ugc-image-upload",
   ].join(" ");
 
   const spotifyAuthUrl = new URL("https://accounts.spotify.com/authorize");

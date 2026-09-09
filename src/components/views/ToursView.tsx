@@ -211,7 +211,7 @@ export function ToursView() {
                   type="button"
                   onClick={() => handleStudyRehearsal(tour)}
                   disabled={isLoading}
-                  className="w-full inline-flex items-center justify-center gap-2.5 px-4 py-3 rounded-xl bg-[#1DB954] hover:bg-[#1ed760] disabled:bg-[#1DB954]/50 text-black font-extrabold text-sm shadow-md shadow-[#1DB954]/20 hover:shadow-[#1DB954]/35 active:scale-[0.98] transition-all cursor-pointer disabled:cursor-not-allowed"
+                  className="w-full inline-flex items-center justify-center gap-2.5 px-4 py-3 rounded-xl bg-[#1DB954] hover:bg-[#1ed760] disabled:bg-[#1DB954]/50 text-black font-semibold text-sm active:scale-[0.98] transition-all cursor-pointer disabled:cursor-not-allowed"
                 >
                   {isLoading ? (
                     <>

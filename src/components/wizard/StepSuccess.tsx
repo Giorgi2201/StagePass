@@ -16,9 +16,12 @@ import {
   Share2,
   Copy,
   Check,
+  Download,
 } from "lucide-react";
 import { successPulse, tickHaptic } from "@/lib/haptics";
 import { saveTicketStub, getDefaultTicketTheme } from "@/lib/storage";
+import { PlaylistCoverArt } from "@/components/ticket/PlaylistCoverArt";
+import { exportPlaylistCover, downloadCoverImage } from "@/lib/cover-export";
 
 export function StepSuccess() {
   const {
@@ -32,12 +35,15 @@ export function StepSuccess() {
     selectedShow,
     excludedTrackIndices,
     resetWizard,
+    coverDataUrl,
+    setCoverDataUrl,
   } = useWizard();
 
   const [isUnmatchedExpanded, setIsUnmatchedExpanded] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedText, setCopiedText] = useState(false);
   const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
+  const [isDownloadingCover, setIsDownloadingCover] = useState(false);
 
   // Trigger celebratory haptic sequence and auto-save stub upon receiving playlist creation confirmation
   useEffect(() => {
@@ -79,6 +85,84 @@ export function StepSuccess() {
       }
     }
   }, [creationResult, youtubeResult, parseResult, selectedArtist, selectedShow, excludedTrackIndices]);
+
+  // Pre-generate cover artwork in background if not already cached
+  useEffect(() => {
+    if (!coverDataUrl && (creationResult || youtubeResult)) {
+      let isSubscribed = true;
+      const timer = setTimeout(() => {
+        exportPlaylistCover({ elementId: "success-playlist-cover-art" })
+          .then((res) => {
+            if (isSubscribed && res?.dataUrl) {
+              setCoverDataUrl(res.dataUrl);
+            }
+          })
+          .catch(() => {});
+      }, 200);
+
+      return () => {
+        isSubscribed = false;
+        clearTimeout(timer);
+      };
+    }
+  }, [coverDataUrl, creationResult, youtubeResult, setCoverDataUrl]);
+
+  const handleCopyLink = async () => {
+    const url = creationResult?.playlistUrl || youtubeResult?.youtubeUrl;
+    if (url) {
+      try {
+        await navigator.clipboard.writeText(url);
+        setCopiedLink(true);
+        setTimeout(() => setCopiedLink(false), 2000);
+      } catch (err) {
+        console.error("Failed to copy link:", err);
+      }
+    }
+  };
+
+  const handleCopyTracklistText = async () => {
+    tickHaptic();
+    if (!parseResult) return;
+
+    const artist = selectedArtist?.name || parseResult.artistName || "Artist";
+    const activeTracks = parseResult.tracks.filter(
+      (_, index) => !excludedTrackIndices.has(index)
+    );
+    const tracksToFormat = activeTracks.length > 0 ? activeTracks : parseResult.tracks;
+
+    const formattedList = tracksToFormat
+      .map((track, i) => `${i + 1}. ${artist} - ${track.name}`)
+      .join("\n");
+
+    try {
+      await navigator.clipboard.writeText(formattedList);
+      setCopiedText(true);
+      setTimeout(() => setCopiedText(false), 2500);
+    } catch (err) {
+      console.error("Failed to copy tracklist text:", err);
+    }
+  };
+
+  const handleDownloadCover = async () => {
+    tickHaptic();
+    try {
+      setIsDownloadingCover(true);
+      let dataUrl = coverDataUrl;
+      if (!dataUrl) {
+        const res = await exportPlaylistCover({ elementId: "success-playlist-cover-art" });
+        dataUrl = res.dataUrl;
+        setCoverDataUrl(res.dataUrl);
+      }
+      const safeArtist = (selectedArtist?.name || parseResult?.artistName || "tour")
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, "-");
+      downloadCoverImage(dataUrl, `${safeArtist}-tour-poster.jpg`);
+    } catch (err) {
+      console.error("Failed to download tour poster cover:", err);
+    } finally {
+      setIsDownloadingCover(false);
+    }
+  };
 
   // Loading State with real-time dynamic contextual messages
   if (isGenerating) {
@@ -122,48 +206,28 @@ export function StepSuccess() {
   const unmatchedList =
     creationResult?.unmatchedTracks || youtubeResult?.unmatchedTracks || [];
 
-  const handleCopyLink = async () => {
-    const url = creationResult?.playlistUrl || youtubeResult?.youtubeUrl;
-    if (url) {
-      try {
-        await navigator.clipboard.writeText(url);
-        setCopiedLink(true);
-        setTimeout(() => setCopiedLink(false), 2000);
-      } catch (err) {
-        console.error("Failed to copy link:", err);
-      }
-    }
-  };
-
-  const handleCopyTracklistText = async () => {
-    tickHaptic();
-    if (!parseResult) return;
-
-    const artist = selectedArtist?.name || parseResult.artistName || "Artist";
-    const activeTracks = parseResult.tracks.filter(
-      (_, index) => !excludedTrackIndices.has(index)
-    );
-    const tracksToFormat = activeTracks.length > 0 ? activeTracks : parseResult.tracks;
-
-    const formattedList = tracksToFormat
-      .map((track, i) => `${i + 1}. ${artist} - ${track.name}`)
-      .join("\n");
-
-    try {
-      await navigator.clipboard.writeText(formattedList);
-      setCopiedText(true);
-      setTimeout(() => setCopiedText(false), 2500);
-    } catch (err) {
-      console.error("Failed to copy tracklist text:", err);
-    }
-  };
-
   return (
     <div className="max-w-xl mx-auto space-y-6 animate-in zoom-in-95 duration-300">
       {/* Success Notification Banner */}
       <div className="p-6 sm:p-8 rounded-2xl bg-gradient-to-b from-[#1c2c20] via-[#141d16] to-[#121212] border border-[#1DB954]/40 shadow-2xl text-center space-y-5">
-        <div className="w-14 h-14 rounded-full bg-[#1DB954]/20 border border-[#1DB954]/50 text-[#1DB954] flex items-center justify-center mx-auto shadow-lg shadow-[#1DB954]/20">
-          <CheckCircle2 className="w-8 h-8" />
+        {/* Square Tour Poster Preview / Success Emblem */}
+        <div className="flex justify-center">
+          {coverDataUrl ? (
+            <div className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden border border-white/15 shadow-2xl bg-neutral-900 group">
+              <img
+                src={coverDataUrl}
+                alt="Official Tour Poster Artwork"
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute bottom-1 right-1 w-6 h-6 rounded-full bg-[#1DB954] text-black flex items-center justify-center shadow-md border border-black/40">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+              </div>
+            </div>
+          ) : (
+            <div className="w-14 h-14 rounded-full bg-[#1DB954]/20 border border-[#1DB954]/50 text-[#1DB954] flex items-center justify-center mx-auto">
+              <CheckCircle2 className="w-8 h-8" />
+            </div>
+          )}
         </div>
 
         <div className="space-y-1.5">
@@ -216,7 +280,7 @@ export function StepSuccess() {
                 href={youtubeResult.youtubeUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full h-12 inline-flex items-center justify-center gap-2.5 px-6 rounded-xl bg-[#FF0000] hover:bg-[#e60000] text-white font-semibold text-base shadow-lg shadow-[#FF0000]/25 active:scale-[0.98] transition-all cursor-pointer"
+                className="w-full h-12 inline-flex items-center justify-center gap-2.5 px-6 rounded-xl bg-[#FF0000] hover:bg-[#e60000] text-white font-semibold text-base active:scale-[0.98] transition-all cursor-pointer"
               >
                 <svg className="w-5 h-5 fill-white shrink-0" viewBox="0 0 24 24">
                   <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
@@ -238,7 +302,7 @@ export function StepSuccess() {
                 href={creationResult.playlistUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex-1 h-12 inline-flex items-center justify-center gap-2.5 px-6 rounded-xl bg-[#1DB954] hover:bg-[#1ed760] text-black font-semibold text-sm shadow-xl shadow-[#1DB954]/30 active:scale-[0.98] transition-all"
+                className="flex-1 h-12 inline-flex items-center justify-center gap-2.5 px-6 rounded-xl bg-[#1DB954] hover:bg-[#1ed760] text-black font-semibold text-sm active:scale-[0.98] transition-all"
               >
                 <svg
                   className="w-5 h-5 fill-black shrink-0"
@@ -261,6 +325,21 @@ export function StepSuccess() {
               </button>
             </div>
           )}
+
+          {/* Direct Save Tour Poster Action */}
+          <button
+            type="button"
+            onClick={handleDownloadCover}
+            disabled={isDownloadingCover}
+            className="w-full h-11 inline-flex items-center justify-center gap-2 px-5 rounded-xl bg-white/[0.06] hover:bg-white/[0.1] active:bg-white/[0.14] border border-white/10 text-white font-medium text-sm transition-all active:scale-[0.98] cursor-pointer disabled:opacity-50"
+          >
+            {isDownloadingCover ? (
+              <Loader2 className="w-4 h-4 text-white animate-spin" />
+            ) : (
+              <Download className="w-4 h-4 text-white/90" />
+            )}
+            <span>Save Tour Poster (JPEG)</span>
+          </button>
 
           {/* Universal "Copy Tracklist as Text" Action */}
           <div className="w-full flex flex-col items-center gap-2 pt-1">
@@ -405,6 +484,40 @@ export function StepSuccess() {
         playlistUrl={creationResult?.playlistUrl || youtubeResult?.youtubeUrl || ""}
         mode={parseResult?.mode}
       />
+
+      {/* Hidden Offscreen Cover Art for Snapshot/Download Fallback */}
+      <div
+        className="fixed -left-[9999px] top-0 pointer-events-none opacity-0 select-none overflow-hidden"
+        style={{ width: "640px", height: "640px" }}
+        aria-hidden="true"
+      >
+        <PlaylistCoverArt
+          id="success-playlist-cover-art"
+          artistName={selectedArtist?.name || parseResult?.artistName || "Concert Artist"}
+          artistImageUrl={selectedArtist?.imageUrl || null}
+          tourName={
+            parseResult?.tourName ||
+            selectedShow?.tourName ||
+            (parseResult?.mode === "essential" ? "Essential Hits & Fan Favorites" : "World Tour")
+          }
+          venueName={
+            parseResult?.mode === "essential"
+              ? "STUDIO DISCOGRAPHY"
+              : selectedShow?.venueName || parseResult?.venueInfo || "Main Stage Arena"
+          }
+          cityName={
+            parseResult?.mode === "essential"
+              ? "GLOBAL ESSENTIALS"
+              : selectedShow?.cityName || "Live Tour"
+          }
+          eventDate={
+            parseResult?.mode === "essential"
+              ? "STUDIO 2026"
+              : selectedShow?.eventDate || "LIVE 2026"
+          }
+          trackCount={matchedCount || parseResult?.tracks.length || 0}
+        />
+      </div>
     </div>
   );
 }

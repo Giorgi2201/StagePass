@@ -155,7 +155,7 @@ export const TicketStub = forwardRef<HTMLDivElement, TicketStubProps>(
     const themeStyles = {
       spotify: {
         container:
-          "bg-[#141414] text-white border-neutral-800 shadow-[0_12px_40px_rgba(0,0,0,0.8),0_0_30px_rgba(29,185,84,0.12)]",
+          "bg-[#141414] text-white border-neutral-800 shadow-2xl",
         stubBg: "bg-[#0f0f0f] border-neutral-800",
         dividerBorder: "border-neutral-700/80",
         notchColor: "bg-[#0a0a0a]", // matches outer modal/backdrop
@@ -170,7 +170,7 @@ export const TicketStub = forwardRef<HTMLDivElement, TicketStubProps>(
       },
       vintage: {
         container:
-          "bg-[#FAF4E8] text-[#241C15] border-[#D4C3A3] shadow-[0_12px_35px_rgba(0,0,0,0.6),0_2px_10px_rgba(90,70,50,0.15)]",
+          "bg-[#FAF4E8] text-[#241C15] border-[#D4C3A3] shadow-xl",
         stubBg: "bg-[#F1E7D3] border-[#D4C3A3]",
         dividerBorder: "border-[#C5B390]",
         notchColor: "bg-[#0a0a0a]",
@@ -185,7 +185,7 @@ export const TicketStub = forwardRef<HTMLDivElement, TicketStubProps>(
       },
       cyber: {
         container:
-          "bg-[#090912] text-white border-cyan-500/40 shadow-[0_12px_40px_rgba(0,0,0,0.9),0_0_35px_rgba(6,182,212,0.22)]",
+          "bg-[#090912] text-white border-cyan-500/40 shadow-2xl",
         stubBg: "bg-[#05050A] border-cyan-900/60",
         dividerBorder: "border-cyan-500/50",
         notchColor: "bg-[#0a0a0a]",

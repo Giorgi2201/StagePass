@@ -172,7 +172,7 @@ export function InstallPrompt() {
             <button
               type="button"
               onClick={handleInstallClick}
-              className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-[#1DB954] hover:bg-[#1ed760] text-black font-extrabold text-xs shadow-lg shadow-[#1DB954]/25 active:scale-[0.97] transition-all cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-[#1DB954] hover:bg-[#1ed760] text-black font-semibold text-xs active:scale-[0.97] transition-all cursor-pointer"
             >
               <Download className="w-3.5 h-3.5 stroke-[2.5]" />
               <span>Install App</span>
@@ -314,7 +314,7 @@ export function InstallPrompt() {
             <button
               type="button"
               onClick={dismissPrompt}
-              className="w-full py-3 rounded-xl bg-[#1DB954] hover:bg-[#1ed760] text-black font-extrabold text-xs sm:text-sm shadow-lg shadow-[#1DB954]/25 active:scale-[0.98] transition-all cursor-pointer"
+              className="w-full py-3 rounded-xl bg-[#1DB954] hover:bg-[#1ed760] text-black font-semibold text-xs sm:text-sm active:scale-[0.98] transition-all cursor-pointer"
             >
               Got It!
             </button>

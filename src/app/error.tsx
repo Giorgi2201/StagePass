@@ -50,7 +50,7 @@ export default function ErrorBoundary({
           <button
             type="button"
             onClick={() => reset()}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-[#1DB954] hover:bg-[#1ed760] text-black font-extrabold text-xs sm:text-sm shadow-xl shadow-[#1DB954]/25 active:scale-[0.98] transition-all cursor-pointer"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-[#1DB954] hover:bg-[#1ed760] text-black font-semibold text-xs sm:text-sm active:scale-[0.98] transition-all cursor-pointer"
           >
             <RotateCcw className="w-4 h-4" />
             <span>Try Again</span>

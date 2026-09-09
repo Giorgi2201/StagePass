@@ -65,7 +65,10 @@ export interface CreatePlaylistRequest {
   description: string;
   isPublic: boolean;
   performingArtist: string;
+  artistMbid?: string;
+  artistSpotifyId?: string;
   tracks: NormalizedTrack[];
+  coverImageBase64?: string;
 }
 
 export interface MatchedTrackResult {
@@ -83,24 +86,5 @@ export interface CreatePlaylistResponse {
   matchedCount: number;
   totalRequested: number;
   unmatchedTracks: string[];
-}
-
-export interface CheckLikedTracksRequest {
-  trackIds: string[];
-  artistName?: string;
-  tracks?: Array<{
-    id?: string;
-    name: string;
-    candidateIds?: string[];
-  }>;
-}
-
-export interface CheckLikedTracksResponse {
-  success: boolean;
-  isGuest: boolean;
-  needsReauth?: boolean;
-  likedMap: Record<string, boolean>;
-  likedCount: number;
-  totalChecked: number;
-  readinessPercentage: number;
+  coverUploaded?: boolean;
 }
