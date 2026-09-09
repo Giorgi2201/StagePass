@@ -84,3 +84,23 @@ export interface CreatePlaylistResponse {
   totalRequested: number;
   unmatchedTracks: string[];
 }
+
+export interface CheckLikedTracksRequest {
+  trackIds: string[];
+  artistName?: string;
+  tracks?: Array<{
+    id?: string;
+    name: string;
+    candidateIds?: string[];
+  }>;
+}
+
+export interface CheckLikedTracksResponse {
+  success: boolean;
+  isGuest: boolean;
+  needsReauth?: boolean;
+  likedMap: Record<string, boolean>;
+  likedCount: number;
+  totalChecked: number;
+  readinessPercentage: number;
+}

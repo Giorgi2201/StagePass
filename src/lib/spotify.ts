@@ -1,6 +1,7 @@
 import type { NormalizedArtist, NormalizedTrack } from "@/types/setlist";
 import { getValidSession } from "@/lib/auth";
 import type {
+  CheckLikedTracksResponse,
   MatchedTrackResult,
   SpotifyPlaylist,
   SpotifySearchResponse,
@@ -118,6 +119,71 @@ async function findBestSpotifyTrack(
   candidates.sort((a, b) => b.popularity - a.popularity);
 
   return candidates[0];
+}
+
+/**
+ * Searches and returns both the best matching SpotifyTrack and up to 5
+ * candidate track IDs (matching alternate releases like singles or deluxes)
+ */
+export async function matchTrackWithCandidates(
+  trackName: string,
+  performingArtist: string,
+  originalArtist?: string,
+  isCover = false,
+  userAccessToken = ""
+): Promise<{ bestTrack: SpotifyTrack | null; candidateIds: string[] }> {
+  const cleanTitle = sanitizeTrackTitle(trackName);
+  if (!cleanTitle) return { bestTrack: null, candidateIds: [] };
+
+  const token = userAccessToken || (await getActiveSpotifyToken()) || "";
+  if (!token) return { bestTrack: null, candidateIds: [] };
+
+  let candidates: SpotifyTrack[] = [];
+  const tier1Query = `track:"${cleanTitle}" artist:"${performingArtist}"`;
+  candidates = await searchSpotify(tier1Query, token);
+
+  if (candidates.length === 0 && isCover && originalArtist) {
+    const cleanOriginal = sanitizeTrackTitle(originalArtist);
+    const tier2Query = `track:"${cleanTitle}" artist:"${cleanOriginal}"`;
+    candidates = await searchSpotify(tier2Query, token);
+  }
+
+  if (candidates.length === 0) {
+    const tier3Query = `"${cleanTitle}" "${performingArtist}"`;
+    candidates = await searchSpotify(tier3Query, token);
+  }
+
+  if (candidates.length === 0) {
+    candidates = await searchSpotify(`"${cleanTitle}"`, token);
+  }
+
+  if (candidates.length === 0) {
+    return { bestTrack: null, candidateIds: [] };
+  }
+
+  // Filter candidates where song title matches closely to avoid unrelated songs by the same artist
+  const normTarget = normalizeSongTitleForDeduplication(cleanTitle);
+  const matchingCandidates = candidates.filter((c) => {
+    const normC = normalizeSongTitleForDeduplication(c.name);
+    return (
+      normC === normTarget ||
+      normC.includes(normTarget) ||
+      normTarget.includes(normC)
+    );
+  });
+
+  const finalCandidatesList =
+    matchingCandidates.length > 0 ? matchingCandidates : candidates;
+  finalCandidatesList.sort(
+    (a, b) => (b.popularity || 0) - (a.popularity || 0)
+  );
+
+  const bestTrack = finalCandidatesList[0] || candidates[0];
+  const candidateIds = Array.from(
+    new Set([bestTrack.id, ...finalCandidatesList.map((c) => c.id)])
+  ).slice(0, 10);
+
+  return { bestTrack, candidateIds };
 }
 
 /**
@@ -636,10 +702,21 @@ export async function fetchArtistTopTracks(
   });
 
   // Intelligent Deduplication: map by normalized title, retaining the highest popularity version
+  // and accumulating candidate IDs from alternate releases (singles, deluxes, compilations)
   const dedupMap = new Map<string, SpotifyTrack>();
+  const candidatesMap = new Map<string, string[]>();
+
   for (const t of filteredTracks.length > 0 ? filteredTracks : allTracks) {
     const key = normalizeSongTitleForDeduplication(t.name);
     if (!key) continue;
+
+    if (!candidatesMap.has(key)) {
+      candidatesMap.set(key, []);
+    }
+    const cList = candidatesMap.get(key)!;
+    if (t.id && !cList.includes(t.id)) {
+      cList.push(t.id);
+    }
 
     const existing = dedupMap.get(key);
     if (!existing) {
@@ -665,21 +742,333 @@ export async function fetchArtistTopTracks(
   // Slice top 15-20 tracks
   const finalTracks = uniqueTracks.slice(0, 20);
 
-  // Map to NormalizedTrack with realistic confidenceScore / popularity metric
+  // Map to NormalizedTrack with realistic confidenceScore / popularity metric and candidate IDs
   return finalTracks.map((track, index) => {
+    const key = normalizeSongTitleForDeduplication(track.name);
+    const candidateIds = Array.from(
+      new Set([track.id, ...(candidatesMap.get(key) || [])])
+    );
+
     const popScore =
       typeof track.popularity === "number" && track.popularity > 0
         ? track.popularity
         : Math.max(98 - index * 2, 60);
 
     return {
+      id: track.id,
       name: track.name,
       isCover: false,
       isEncore: false,
       setNumber: 1,
       confidenceScore: popScore,
+      candidateIds,
     };
   });
+}
+
+/**
+ * Cross-references a list of Spotify track IDs against the user's "Liked Songs" library.
+ * Batches requests into chunks of up to 50 tracks (Spotify API limit) concurrently.
+ */
+export async function checkUserLikedTracks(
+  trackIds: string[],
+  userAccessToken: string,
+  tracksContext?: Array<{ id?: string; name: string; candidateIds?: string[] }>,
+  performingArtist?: string
+): Promise<CheckLikedTracksResponse> {
+  const totalConcertTracks =
+    tracksContext && tracksContext.length > 0
+      ? tracksContext.length
+      : trackIds.length;
+
+  if (!userAccessToken) {
+    return {
+      success: false,
+      isGuest: true,
+      likedMap: {},
+      likedCount: 0,
+      totalChecked: totalConcertTracks,
+      readinessPercentage: 0,
+    };
+  }
+
+  // Pre-initialize likedMap with false for all input IDs and candidate IDs
+  const likedMap: Record<string, boolean> = {};
+
+  // Filter and sanitize valid Spotify track IDs
+  const validTrackIds: string[] = [];
+  const addTrackId = (rawId?: string) => {
+    if (typeof rawId !== "string") return;
+    let id = rawId.trim();
+    if (id.startsWith("spotify:track:")) {
+      id = id.replace("spotify:track:", "").trim();
+    }
+    if (/^[a-zA-Z0-9]+$/.test(id)) {
+      validTrackIds.push(id);
+      likedMap[id] = false;
+    }
+  };
+
+  for (const rawId of trackIds) {
+    addTrackId(rawId);
+  }
+
+  if (tracksContext) {
+    for (const ct of tracksContext) {
+      addTrackId(ct.id);
+      if (ct.candidateIds) {
+        for (const cid of ct.candidateIds) {
+          addTrackId(cid);
+        }
+      }
+    }
+  }
+
+  const uniqueIds = Array.from(new Set(validTrackIds));
+
+  // Spotify modern Web API endpoint GET /v1/me/library/contains enforces maximum 40 URIs per request
+  const BATCH_SIZE = 40;
+  const batches: string[][] = [];
+  for (let i = 0; i < uniqueIds.length; i += BATCH_SIZE) {
+    batches.push(uniqueIds.slice(i, i + BATCH_SIZE));
+  }
+
+  try {
+    // 1. Check all candidate IDs against /v1/me/library/contains?uris=spotify:track:...
+    const containsPromise = Promise.all(
+      batches.map(async (batch) => {
+        try {
+          const urisParam = batch
+            .map((id) =>
+              encodeURIComponent(
+                id.startsWith("spotify:track:") ? id : `spotify:track:${id}`
+              )
+            )
+            .join(",");
+          const url = `${SPOTIFY_API_BASE_URL}/me/library/contains?uris=${urisParam}`;
+
+          const res = await fetch(url, {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${userAccessToken}`,
+              Accept: "application/json",
+            },
+            cache: "no-store",
+          });
+
+          if (!res.ok) {
+            const errBody = await res.text().catch(() => "");
+            console.warn(
+              `[Spotify Liked Tracks] /me/library/contains request failed (status: ${res.status}): ${res.statusText}`,
+              errBody
+            );
+            return batch.map(() => false);
+          }
+
+          const data = (await res.json()) as boolean[];
+          if (Array.isArray(data)) {
+            return data;
+          }
+          return batch.map(() => false);
+        } catch (err) {
+          console.error(
+            "[Spotify Liked Tracks] Network error querying /v1/me/library/contains:",
+            err
+          );
+          return batch.map(() => false);
+        }
+      })
+    );
+
+    // 2. Concurrently ingest user's saved tracks from /v1/me/tracks (up to 250 tracks)
+    const savedTracksPromise = (async () => {
+      try {
+        const offsets = [0, 50, 100, 150, 200];
+        const pageResults = await Promise.allSettled(
+          offsets.map(async (offset) => {
+            const url = `${SPOTIFY_API_BASE_URL}/me/tracks?limit=50&offset=${offset}`;
+            const res = await fetch(url, {
+              headers: {
+                Authorization: `Bearer ${userAccessToken}`,
+                Accept: "application/json",
+              },
+              cache: "no-store",
+            });
+            if (!res.ok) return [];
+            const data = await res.json();
+            return (data.items || []).map((item: any) => ({
+              id: item.track?.id as string | undefined,
+              name: (item.track?.name as string) || "",
+              artists: ((item.track?.artists || []) as Array<{ name: string }>).map((a) => a.name),
+              isrc: item.track?.external_ids?.isrc as string | undefined,
+            }));
+          })
+        );
+
+        const savedItems: Array<{
+          id?: string;
+          name: string;
+          artists: string[];
+          isrc?: string;
+        }> = [];
+
+        for (const p of pageResults) {
+          if (p.status === "fulfilled" && Array.isArray(p.value)) {
+            savedItems.push(...p.value);
+          }
+        }
+        return savedItems;
+      } catch (err) {
+        console.warn("[Spotify Liked Tracks] Failed to fetch saved tracks list:", err);
+        return [];
+      }
+    })();
+
+    const [batchResults, userSavedTracks] = await Promise.all([
+      containsPromise,
+      savedTracksPromise,
+    ]);
+
+    // Map boolean results back to their corresponding track IDs
+    batches.forEach((batch, batchIdx) => {
+      const results = batchResults[batchIdx];
+      batch.forEach((id, idIdx) => {
+        likedMap[id] = Boolean(results[idIdx]);
+      });
+    });
+
+    // Cross-reference userSavedTracks against likedMap & tracksContext
+    const userSavedIdSet = new Set(
+      userSavedTracks
+        .map((t) => t.id)
+        .filter((id): id is string => typeof id === "string" && Boolean(id.trim()))
+    );
+
+    // Mark any track directly present in user's saved library
+    for (const savedId of userSavedIdSet) {
+      likedMap[savedId] = true;
+    }
+
+    const cleanArtist = (performingArtist || "").toLowerCase().trim();
+
+    // Cross-match tracksContext with user's saved tracks by title, artist & ISRC
+    if (tracksContext && tracksContext.length > 0) {
+      for (const ct of tracksContext) {
+        const normConcert = normalizeSongTitleForDeduplication(ct.name);
+
+        // Check if primary ID or any candidate ID was found
+        const alreadyMatched =
+          (ct.id && likedMap[ct.id]) ||
+          ct.candidateIds?.some((cid) => likedMap[cid]) ||
+          (ct.id && userSavedIdSet.has(ct.id)) ||
+          ct.candidateIds?.some((cid) => userSavedIdSet.has(cid));
+
+        if (alreadyMatched) {
+          if (ct.id) likedMap[ct.id] = true;
+          ct.candidateIds?.forEach((cid) => {
+            likedMap[cid] = true;
+          });
+          continue;
+        }
+
+        // Deep match by title + artist in user's saved library
+        const foundInLibrary = userSavedTracks.find((saved) => {
+          const normSaved = normalizeSongTitleForDeduplication(saved.name);
+          if (!normSaved || !normConcert) return false;
+
+          const titleMatches =
+            normConcert === normSaved ||
+            normConcert.startsWith(normSaved) ||
+            normSaved.startsWith(normConcert) ||
+            normConcert.includes(normSaved) ||
+            normSaved.includes(normConcert);
+
+          if (!titleMatches) return false;
+
+          // Verify artist matches
+          if (!cleanArtist) return true;
+          return saved.artists.some((a) => {
+            const aLower = a.toLowerCase();
+            return aLower.includes(cleanArtist) || cleanArtist.includes(aLower);
+          });
+        });
+
+        if (foundInLibrary) {
+          if (ct.id) likedMap[ct.id] = true;
+          if (foundInLibrary.id) likedMap[foundInLibrary.id] = true;
+          ct.candidateIds?.forEach((cid) => {
+            likedMap[cid] = true;
+          });
+        }
+      }
+    }
+
+    // Bidirectional sync: if any candidate ID is liked, mark the track's other IDs as liked
+    if (tracksContext) {
+      for (const ct of tracksContext) {
+        const isAnyLiked =
+          (ct.id && likedMap[ct.id]) ||
+          ct.candidateIds?.some((cid) => likedMap[cid]);
+        if (isAnyLiked) {
+          if (ct.id) likedMap[ct.id] = true;
+          ct.candidateIds?.forEach((cid) => {
+            likedMap[cid] = true;
+          });
+        }
+      }
+    }
+
+    const totalChecked = totalConcertTracks;
+    let likedCount = 0;
+
+    if (tracksContext && tracksContext.length > 0) {
+      likedCount = tracksContext.filter((ct) => {
+        if (ct.id && likedMap[ct.id]) return true;
+        if (ct.candidateIds?.some((cid) => likedMap[cid])) return true;
+        return false;
+      }).length;
+    } else {
+      likedCount = Object.values(likedMap).filter(Boolean).length;
+    }
+
+    const readinessPercentage =
+      totalChecked > 0 ? Math.round((likedCount / totalChecked) * 100) : 0;
+
+    try {
+      const fs = await import("fs");
+      fs.appendFileSync(
+        "debug_spotify.log",
+        `[checkUserLikedTracks] Completed check.\n` +
+          `userSavedTracks fetched: ${userSavedTracks.length}\n` +
+          `totalChecked: ${totalChecked}, likedCount: ${likedCount}, readiness: ${readinessPercentage}%\n`
+      );
+    } catch {}
+
+    return {
+      success: true,
+      isGuest: false,
+      needsReauth: false,
+      likedMap,
+      likedCount,
+      totalChecked,
+      readinessPercentage,
+    };
+  } catch (err) {
+    console.error("[Spotify Liked Tracks] Unexpected error during check:", err);
+    const totalChecked = totalConcertTracks;
+    const likedCount = Object.values(likedMap).filter(Boolean).length;
+    const readinessPercentage =
+      totalChecked > 0 ? Math.round((likedCount / totalChecked) * 100) : 0;
+
+    return {
+      success: false,
+      isGuest: false,
+      likedMap,
+      likedCount,
+      totalChecked,
+      readinessPercentage,
+    };
+  }
 }
 
 

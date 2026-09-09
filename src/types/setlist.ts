@@ -111,6 +111,8 @@ export interface NormalizedShow {
 }
 
 export interface NormalizedTrack {
+  id?: string;
+  candidateIds?: string[];
   name: string;
   originalArtist?: string;
   isCover: boolean;

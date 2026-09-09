@@ -1,0 +1,160 @@
+
+[2026-09-08T18:32:43.954Z] /api/spotify/check-liked-tracks called.
+trackIds count: 1
+session present: false
+user: none
+Returning isGuest: true
+
+[2026-09-08T18:44:41.661Z] /api/spotify/check-liked-tracks called.
+artist: Kendrick Lamar
+trackIds count: 76, concert tracks count: 21
+session present: true
+user: 31nvgrxqqoesyijiifnar6ef3qpu
+
+[2026-09-08T18:44:41.705Z] /api/spotify/check-liked-tracks called.
+artist: Kendrick Lamar
+trackIds count: 76, concert tracks count: 21
+session present: true
+user: 31nvgrxqqoesyijiifnar6ef3qpu
+[checkUserLikedTracks] Completed check.
+userSavedTracks fetched: 250
+totalChecked: 21, likedCount: 8, readiness: 38%
+hasScopeError: true
+checkUserLikedTracks result: success=false, needsReauth=true, likedCount=8, totalChecked=21, readinessPercentage=38
+sample likedMap entries: [["5gOfC9UzZQzTyShqPMrpjT",true],["0dYNnBMNujBe6v9JeU5NC5",true],["0nj9Bq5sHDiTxSHunhgkFb",true],["4kGlAkGC58crFvxfegBhNs",true],["77DRzu7ERs0TX3roZcre7Q",true]]
+[checkUserLikedTracks] Completed check.
+userSavedTracks fetched: 250
+totalChecked: 21, likedCount: 8, readiness: 38%
+hasScopeError: true
+checkUserLikedTracks result: success=false, needsReauth=true, likedCount=8, totalChecked=21, readinessPercentage=38
+sample likedMap entries: [["5gOfC9UzZQzTyShqPMrpjT",true],["0dYNnBMNujBe6v9JeU5NC5",true],["0nj9Bq5sHDiTxSHunhgkFb",true],["4kGlAkGC58crFvxfegBhNs",true],["77DRzu7ERs0TX3roZcre7Q",true]]
+
+[2026-09-08T18:44:49.558Z] /api/spotify/check-liked-tracks called.
+artist: Kendrick Lamar
+trackIds count: 76, concert tracks count: 21
+session present: true
+user: 31nvgrxqqoesyijiifnar6ef3qpu
+
+[2026-09-08T18:44:49.597Z] /api/spotify/check-liked-tracks called.
+artist: Kendrick Lamar
+trackIds count: 76, concert tracks count: 21
+session present: true
+user: 31nvgrxqqoesyijiifnar6ef3qpu
+[checkUserLikedTracks] Completed check.
+userSavedTracks fetched: 250
+totalChecked: 21, likedCount: 8, readiness: 38%
+hasScopeError: true
+checkUserLikedTracks result: success=false, needsReauth=true, likedCount=8, totalChecked=21, readinessPercentage=38
+sample likedMap entries: [["5gOfC9UzZQzTyShqPMrpjT",true],["0dYNnBMNujBe6v9JeU5NC5",true],["0nj9Bq5sHDiTxSHunhgkFb",true],["4kGlAkGC58crFvxfegBhNs",true],["77DRzu7ERs0TX3roZcre7Q",true]]
+[checkUserLikedTracks] Completed check.
+userSavedTracks fetched: 250
+totalChecked: 21, likedCount: 8, readiness: 38%
+hasScopeError: true
+checkUserLikedTracks result: success=false, needsReauth=true, likedCount=8, totalChecked=21, readinessPercentage=38
+sample likedMap entries: [["5gOfC9UzZQzTyShqPMrpjT",true],["0dYNnBMNujBe6v9JeU5NC5",true],["0nj9Bq5sHDiTxSHunhgkFb",true],["4kGlAkGC58crFvxfegBhNs",true],["77DRzu7ERs0TX3roZcre7Q",true]]
+
+[2026-09-08T18:45:03.565Z] /api/spotify/check-liked-tracks called.
+artist: Kendrick Lamar
+trackIds count: 76, concert tracks count: 21
+session present: true
+user: 31nvgrxqqoesyijiifnar6ef3qpu
+
+[2026-09-08T18:45:03.650Z] /api/spotify/check-liked-tracks called.
+artist: Kendrick Lamar
+trackIds count: 76, concert tracks count: 21
+session present: true
+user: 31nvgrxqqoesyijiifnar6ef3qpu
+[checkUserLikedTracks] Completed check.
+userSavedTracks fetched: 250
+totalChecked: 21, likedCount: 8, readiness: 38%
+hasScopeError: true
+checkUserLikedTracks result: success=false, needsReauth=true, likedCount=8, totalChecked=21, readinessPercentage=38
+sample likedMap entries: [["5gOfC9UzZQzTyShqPMrpjT",true],["0dYNnBMNujBe6v9JeU5NC5",true],["0nj9Bq5sHDiTxSHunhgkFb",true],["4kGlAkGC58crFvxfegBhNs",true],["77DRzu7ERs0TX3roZcre7Q",true]]
+[checkUserLikedTracks] Completed check.
+userSavedTracks fetched: 250
+totalChecked: 21, likedCount: 8, readiness: 38%
+hasScopeError: true
+checkUserLikedTracks result: success=false, needsReauth=true, likedCount=8, totalChecked=21, readinessPercentage=38
+sample likedMap entries: [["5gOfC9UzZQzTyShqPMrpjT",true],["0dYNnBMNujBe6v9JeU5NC5",true],["0nj9Bq5sHDiTxSHunhgkFb",true],["4kGlAkGC58crFvxfegBhNs",true],["77DRzu7ERs0TX3roZcre7Q",true]]
+
+[2026-09-08T18:47:51.996Z] /api/spotify/check-liked-tracks called.
+artist: Kendrick Lamar
+trackIds count: 76, concert tracks count: 21
+session present: true
+user: 31nvgrxqqoesyijiifnar6ef3qpu
+
+[2026-09-08T18:47:52.156Z] /api/spotify/check-liked-tracks called.
+artist: Kendrick Lamar
+trackIds count: 76, concert tracks count: 21
+session present: true
+user: 31nvgrxqqoesyijiifnar6ef3qpu
+[checkUserLikedTracks] Completed check.
+userSavedTracks fetched: 250
+totalChecked: 21, likedCount: 8, readiness: 38%
+hasScopeError: true
+checkUserLikedTracks result: success=false, needsReauth=true, likedCount=8, totalChecked=21, readinessPercentage=38
+sample likedMap entries: [["5gOfC9UzZQzTyShqPMrpjT",true],["0dYNnBMNujBe6v9JeU5NC5",true],["0nj9Bq5sHDiTxSHunhgkFb",true],["4kGlAkGC58crFvxfegBhNs",true],["77DRzu7ERs0TX3roZcre7Q",true]]
+[checkUserLikedTracks] Completed check.
+userSavedTracks fetched: 250
+totalChecked: 21, likedCount: 8, readiness: 38%
+hasScopeError: true
+checkUserLikedTracks result: success=false, needsReauth=true, likedCount=8, totalChecked=21, readinessPercentage=38
+sample likedMap entries: [["5gOfC9UzZQzTyShqPMrpjT",true],["0dYNnBMNujBe6v9JeU5NC5",true],["0nj9Bq5sHDiTxSHunhgkFb",true],["4kGlAkGC58crFvxfegBhNs",true],["77DRzu7ERs0TX3roZcre7Q",true]]
+
+[2026-09-08T18:53:31.987Z] /api/spotify/check-liked-tracks called.
+artist: Kendrick Lamar
+trackIds count: 76, concert tracks count: 21
+session present: true
+user: 31nvgrxqqoesyijiifnar6ef3qpu
+
+[2026-09-08T18:53:32.048Z] /api/spotify/check-liked-tracks called.
+artist: Kendrick Lamar
+trackIds count: 76, concert tracks count: 21
+session present: true
+user: 31nvgrxqqoesyijiifnar6ef3qpu
+[checkUserLikedTracks] Completed check.
+userSavedTracks fetched: 250
+totalChecked: 21, likedCount: 9, readiness: 43%
+checkUserLikedTracks result: success=true, needsReauth=false, likedCount=9, totalChecked=21, readinessPercentage=43
+sample likedMap entries: [["5gOfC9UzZQzTyShqPMrpjT",true],["0dYNnBMNujBe6v9JeU5NC5",true],["0nj9Bq5sHDiTxSHunhgkFb",true],["4kGlAkGC58crFvxfegBhNs",true],["77DRzu7ERs0TX3roZcre7Q",true]]
+[checkUserLikedTracks] Completed check.
+userSavedTracks fetched: 250
+totalChecked: 21, likedCount: 9, readiness: 43%
+checkUserLikedTracks result: success=true, needsReauth=false, likedCount=9, totalChecked=21, readinessPercentage=43
+sample likedMap entries: [["5gOfC9UzZQzTyShqPMrpjT",true],["0dYNnBMNujBe6v9JeU5NC5",true],["0nj9Bq5sHDiTxSHunhgkFb",true],["4kGlAkGC58crFvxfegBhNs",true],["77DRzu7ERs0TX3roZcre7Q",true]]
+
+[2026-09-08T18:55:02.490Z] /api/spotify/check-liked-tracks called.
+artist: Travis Scott
+trackIds count: 55, concert tracks count: 20
+session present: true
+user: 31nvgrxqqoesyijiifnar6ef3qpu
+
+[2026-09-08T18:55:03.049Z] /api/spotify/check-liked-tracks called.
+artist: Travis Scott
+trackIds count: 55, concert tracks count: 20
+session present: true
+user: 31nvgrxqqoesyijiifnar6ef3qpu
+[checkUserLikedTracks] Completed check.
+userSavedTracks fetched: 250
+totalChecked: 20, likedCount: 17, readiness: 85%
+checkUserLikedTracks result: success=true, needsReauth=false, likedCount=17, totalChecked=20, readinessPercentage=85
+sample likedMap entries: [["0hL9gOw6XBWsygEUcVjxEc",true],["5iUTVWEbtWJUTp2numATGg",true],["1PH2MDbcBAU094DlgTIND1",true],["5RgUNedzrDv7fdnRz7LUqj",true],["2cYqizR4lgvp4Qu6IQ3qGN",true]]
+[checkUserLikedTracks] Completed check.
+userSavedTracks fetched: 250
+totalChecked: 20, likedCount: 17, readiness: 85%
+checkUserLikedTracks result: success=true, needsReauth=false, likedCount=17, totalChecked=20, readinessPercentage=85
+sample likedMap entries: [["0hL9gOw6XBWsygEUcVjxEc",true],["5iUTVWEbtWJUTp2numATGg",true],["1PH2MDbcBAU094DlgTIND1",true],["5RgUNedzrDv7fdnRz7LUqj",true],["2cYqizR4lgvp4Qu6IQ3qGN",true]]
+
+[2026-09-09T07:12:10.800Z] /api/spotify/check-liked-tracks called.
+artist: Coldplay
+trackIds count: 182, concert tracks count: 22
+session present: false
+user: none
+Returning isGuest: true
+
+[2026-09-09T07:12:10.939Z] /api/spotify/check-liked-tracks called.
+artist: Coldplay
+trackIds count: 182, concert tracks count: 22
+session present: false
+user: none
+Returning isGuest: true

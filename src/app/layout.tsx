@@ -3,8 +3,10 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
 import { NavigationProvider } from "@/context/NavigationContext";
+import { AudioProvider } from "@/context/AudioContext";
 import { Navbar } from "@/components/Navbar";
 import { LiquidGlassNav } from "@/components/navigation/LiquidGlassNav";
+import { MiniPlayer } from "@/components/player/MiniPlayer";
 import { OfflineBanner } from "@/components/pwa/OfflineBanner";
 import { InstallPrompt } from "@/components/pwa/InstallPrompt";
 import { SplashScreen } from "@/components/pwa/SplashScreen";
@@ -66,12 +68,15 @@ export default function RootLayout({
       <body className="min-h-screen bg-[#121212] text-zinc-100 flex flex-col font-sans selection:bg-[#1DB954]/30 selection:text-white">
         <AuthProvider>
           <NavigationProvider>
-            <SplashScreen />
-            <OfflineBanner />
-            <Navbar />
-            {children}
-            <LiquidGlassNav />
-            <InstallPrompt />
+            <AudioProvider>
+              <SplashScreen />
+              <OfflineBanner />
+              <Navbar />
+              {children}
+              <MiniPlayer />
+              <LiquidGlassNav />
+              <InstallPrompt />
+            </AudioProvider>
           </NavigationProvider>
         </AuthProvider>
       </body>
