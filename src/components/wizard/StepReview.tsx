@@ -39,7 +39,6 @@ export function StepReview() {
     createPlaylist,
     createYouTubePlaylist,
     isGenerating,
-    generationStatus,
     goBack,
     errorMessage,
     savePendingWizardState,

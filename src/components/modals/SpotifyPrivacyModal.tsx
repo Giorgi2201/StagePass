@@ -30,31 +30,27 @@ export function SpotifyPrivacyModal({
   coverDataUrl,
 }: SpotifyPrivacyModalProps) {
   const [includeCoverImage, setIncludeCoverImage] = useState<boolean>(true);
-  const [liveCoverUrl, setLiveCoverUrl] = useState<string | null>(coverDataUrl || null);
+  const [snapshotCoverUrl, setSnapshotCoverUrl] = useState<string | null>(null);
+  const liveCoverUrl = coverDataUrl || snapshotCoverUrl;
 
-  // Sync or dynamically snapshot live cover preview thumbnail when modal opens
+  // Dynamically snapshot live cover preview thumbnail when modal opens if not already provided
   useEffect(() => {
-    if (coverDataUrl) {
-      setLiveCoverUrl(coverDataUrl);
-      return;
-    }
+    if (coverDataUrl || !isOpen) return;
 
-    if (isOpen) {
-      let isSubscribed = true;
-      exportPlaylistCover()
-        .then((res) => {
-          if (isSubscribed && res?.dataUrl) {
-            setLiveCoverUrl(res.dataUrl);
-          }
-        })
-        .catch(() => {
-          // Offscreen canvas not available yet; thumbnail fallback displays
-        });
+    let isSubscribed = true;
+    exportPlaylistCover()
+      .then((res) => {
+        if (isSubscribed && res?.dataUrl) {
+          setSnapshotCoverUrl(res.dataUrl);
+        }
+      })
+      .catch(() => {
+        // Offscreen canvas not available yet; thumbnail fallback displays
+      });
 
-      return () => {
-        isSubscribed = false;
-      };
-    }
+    return () => {
+      isSubscribed = false;
+    };
   }, [isOpen, coverDataUrl]);
 
   // Close on Escape key press

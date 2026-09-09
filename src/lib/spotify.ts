@@ -2,6 +2,7 @@ import type { NormalizedArtist, NormalizedTrack } from "@/types/setlist";
 import { getValidSession } from "@/lib/auth";
 import type {
   MatchedTrackResult,
+  SpotifyAlbumImage,
   SpotifyPlaylist,
   SpotifySearchResponse,
   SpotifyTrack,
@@ -334,7 +335,7 @@ export async function fetchArtistCatalogTracks(
       res2.ok ? res2.json() : { items: [] },
     ]);
 
-    const albums: Array<{ id: string; name: string; images?: any[] }> = [
+    const albums: Array<{ id: string; name: string; images?: SpotifyAlbumImage[] }> = [
       ...(d1.items || []),
       ...(d2.items || []),
     ];
@@ -353,7 +354,7 @@ export async function fetchArtistCatalogTracks(
         );
         if (!res.ok) return [];
         const data = await res.json();
-        return (data.items || []).map((t: any) => ({
+        return (data.items || []).map((t: SpotifyTrack) => ({
           ...t,
           album: {
             id: album.id,
@@ -434,7 +435,7 @@ export async function batchMatchTracks(
           name: t.name,
           popularity: t.confidenceScore || 80,
           duration_ms: 240000,
-          preview_url: (t as any).previewUrl || null,
+          preview_url: (t as { previewUrl?: string | null }).previewUrl || null,
           artists: [{ id: "", name: performingArtist }],
           album: { id: "", name: "", images: [] },
         },
