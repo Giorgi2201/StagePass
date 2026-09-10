@@ -107,7 +107,7 @@ export function MaximizedPlayer() {
         <>
           {/* =========================================================================
               1. MOBILE FULL-SCREEN LIQUID GLASS PLAYER (md:hidden)
-              Slides up with spring physics, supports swipe-down to dismiss
+              Slides up with spring physics, dismissed via top-left chevron button
              ========================================================================= */}
           <motion.div
             key="maximized-player-mobile"
@@ -115,27 +115,13 @@ export function MaximizedPlayer() {
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 28, stiffness: 350 }}
-            drag="y"
-            dragConstraints={{ top: 0, bottom: 0 }}
-            dragElastic={{ top: 0, bottom: 0.2 }}
-            onDragEnd={(_, { offset, velocity }) => {
-              // Dismiss condition: dragged down more than 120px or quick downward flick > 450px/s
-              if (offset.y > 120 || velocity.y > 450) {
-                setIsExpanded(false);
-              }
-            }}
             style={{
               paddingTop: "calc(env(safe-area-inset-top, 0px) + 12px)",
             }}
-            className="fixed inset-0 z-50 md:hidden flex flex-col justify-between bg-[#0a0a0a]/95 backdrop-blur-3xl text-white select-none overflow-hidden touch-none"
+            className="fixed inset-0 z-50 md:hidden flex flex-col justify-between bg-[#0a0a0a]/95 backdrop-blur-3xl text-white select-none overflow-hidden"
           >
             {/* Subtle Ambient Background Glow (Uniform & Seamless) */}
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full bg-[#1DB954]/10 blur-[100px] pointer-events-none -z-10" />
-
-            {/* Top Drag Indicator Handle */}
-            <div className="pb-1 flex justify-center">
-              <div className="w-10 h-1 rounded-full bg-white/25 cursor-grab active:cursor-grabbing" />
-            </div>
 
             {/* Top Header Bar */}
             <header className="px-6 py-2 flex items-center justify-between gap-4">

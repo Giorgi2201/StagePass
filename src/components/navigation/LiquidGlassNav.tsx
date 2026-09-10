@@ -100,19 +100,20 @@ export function LiquidGlassNav() {
               animate={{ height: "auto", opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
               transition={{ type: "spring", damping: 26, stiffness: 280 }}
-              className="w-full relative z-10"
+              className="w-full overflow-hidden rounded-b-[24px] shadow-[0_4px_14px_rgba(0,0,0,0.22)] relative z-10"
             >
               <motion.div
                 drag="y"
                 dragDirectionLock
                 dragConstraints={{ top: 0, bottom: 0 }}
                 dragElastic={{ top: 0, bottom: 0.6 }}
+                exit={{ y: 0 }}
                 onDragEnd={(_, info) => {
                   if (info.offset.y > 35 || info.velocity.y > 250) {
                     stop();
                   }
                 }}
-                className="relative w-full rounded-b-[24px] shadow-[0_4px_14px_rgba(0,0,0,0.22)] touch-none cursor-grab active:cursor-grabbing"
+                className="relative w-full rounded-b-[24px] touch-none cursor-grab active:cursor-grabbing"
               >
                 <div className="relative w-full rounded-b-[24px] border-b border-white/10 bg-white/[0.04] overflow-hidden">
                   <MobileMiniPlayer />
