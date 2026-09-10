@@ -114,14 +114,18 @@ export function MaximizedPlayer() {
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
-            transition={{ type: "spring", damping: 30, stiffness: 300 }}
+            transition={{ type: "spring", damping: 28, stiffness: 350 }}
             drag="y"
-            dragConstraints={{ top: 0 }}
-            dragElastic={0.2}
+            dragConstraints={{ top: 0, bottom: 0 }}
+            dragElastic={{ top: 0, bottom: 0.2 }}
             onDragEnd={(_, { offset, velocity }) => {
-              if (offset.y > 120 || velocity.y > 500) {
+              // Dismiss condition: dragged down more than 120px or quick downward flick > 450px/s
+              if (offset.y > 120 || velocity.y > 450) {
                 setIsExpanded(false);
               }
+            }}
+            style={{
+              paddingTop: "calc(env(safe-area-inset-top, 0px) + 12px)",
             }}
             className="fixed inset-0 z-50 md:hidden flex flex-col justify-between bg-[#0a0a0a]/95 backdrop-blur-3xl text-white select-none overflow-hidden touch-none"
           >
@@ -129,7 +133,7 @@ export function MaximizedPlayer() {
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full bg-[#1DB954]/10 blur-[100px] pointer-events-none -z-10" />
 
             {/* Top Drag Indicator Handle */}
-            <div className="pt-2 pb-1 flex justify-center">
+            <div className="pb-1 flex justify-center">
               <div className="w-10 h-1 rounded-full bg-white/25 cursor-grab active:cursor-grabbing" />
             </div>
 

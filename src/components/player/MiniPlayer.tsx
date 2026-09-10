@@ -48,7 +48,7 @@ export function MobileMiniPlayer() {
   return (
     <div
       onClick={() => setIsExpanded(true)}
-      className="relative w-full p-2.5 px-3.5 flex items-center justify-between cursor-pointer active:scale-[0.99] transition-transform select-none"
+      className="relative w-full py-2.5 px-3.5 flex items-center justify-between cursor-pointer active:scale-[0.99] transition-transform select-none"
       title="Tap to expand player"
     >
       {/* Full-Panel Background Progress Fill (Spotify Green wash sweeping 0% to 100%) */}
@@ -62,7 +62,7 @@ export function MobileMiniPlayer() {
       </div>
 
       {/* Left: Rounded squircle album artwork thumbnail */}
-      <div className="relative w-12 h-12 rounded-xl overflow-hidden bg-neutral-900 shrink-0 flex items-center justify-center shadow-sm z-10 ring-1 ring-white/10">
+      <div className="relative w-11 h-11 rounded-xl overflow-hidden bg-neutral-900 shrink-0 flex items-center justify-center shadow-sm z-10 ring-1 ring-white/10">
         {artworkUrl ? (
           <img
             src={artworkUrl}
@@ -91,6 +91,7 @@ export function MobileMiniPlayer() {
         <button
           type="button"
           onClick={handleTogglePlayPause}
+          onPointerDown={(e) => e.stopPropagation()}
           disabled={isLoadingAudio}
           className="p-1.5 text-white hover:text-white/80 active:scale-90 transition-all cursor-pointer disabled:opacity-50"
           title={isPlaying ? "Pause Preview" : "Play Preview"}
@@ -111,6 +112,7 @@ export function MobileMiniPlayer() {
             e.stopPropagation();
             skipNext();
           }}
+          onPointerDown={(e) => e.stopPropagation()}
           className="p-1.5 text-white/80 hover:text-white active:scale-90 transition-all cursor-pointer"
           title="Skip Next"
           aria-label="Skip Next"

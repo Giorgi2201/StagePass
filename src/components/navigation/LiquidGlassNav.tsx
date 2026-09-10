@@ -8,7 +8,7 @@ import { MobileMiniPlayer } from "@/components/player/MiniPlayer";
 
 export function LiquidGlassNav() {
   const { activeTab, setActiveTab, tabs } = useNavigation();
-  const { activeTrack } = useAudio();
+  const { activeTrack, stop } = useAudio();
   const navRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const lastZoneIndexRef = useRef<number>(-1);
@@ -65,8 +65,9 @@ export function LiquidGlassNav() {
   };
 
   const handleTabClick = (tabId: NavigationTab) => {
-    if (tabId !== activeTab) {
-      setActiveTab(tabId);
+    setActiveTab(tabId);
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
   };
 
@@ -79,16 +80,18 @@ export function LiquidGlassNav() {
       }}
     >
       {/* =========================================================
-          UNIFIED TWO-TIER LIQUID GLASS DOCK
-          A single continuous frosted glass card enclosing both
-          the mini-player and the navigation tabs with zero seams,
-          zero transparent corner cutouts, and uniform glass tone.
+          UNIFIED TWO-TIER LIQUID GLASS DOCK (THEY ARE ONE)
+          A single continuous frosted glass card where the mini-player
+          is an organic top extension of the navbar, with its left,
+          right, and top borders flush with the outer card, and its
+          lower corners rounded (rounded-b-[24px]) casting a shadow
+          down onto the tab bar as in Picture 2.
          ========================================================= */}
-      <div className="relative w-full rounded-[28px] bg-[#1c1f1d]/85 backdrop-blur-2xl border border-white/10 shadow-[0_12px_40px_0_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.1)] overflow-hidden flex flex-col transition-[border-radius] duration-300">
+      <div className="relative w-full rounded-[28px] bg-[#161817]/95 backdrop-blur-2xl border border-white/10 shadow-[0_12px_40px_0_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.08)] overflow-hidden flex flex-col transition-[border-radius] duration-300">
         {/* Subtle Specular Top Hairline Reflection */}
         <div className="absolute top-0 left-6 right-6 h-[1px] bg-gradient-to-r from-transparent via-white/15 to-transparent pointer-events-none z-20" />
 
-        {/* Tier 1: Conjoined Mobile Mini-Player (slides down/up inside the single unified card) */}
+        {/* Tier 1: Conjoined Mobile Mini-Player (Direct top extension of navbar with slide-down dismiss) */}
         <AnimatePresence>
           {activeTrack && (
             <motion.div
@@ -97,11 +100,24 @@ export function LiquidGlassNav() {
               animate={{ height: "auto", opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
               transition={{ type: "spring", damping: 26, stiffness: 280 }}
-              className="w-full overflow-hidden"
+              className="w-full relative z-10"
             >
-              <MobileMiniPlayer />
-              {/* Subtle hairline divider between mini-player and navigation */}
-              <div className="w-full h-[1px] bg-white/[0.08]" />
+              <motion.div
+                drag="y"
+                dragDirectionLock
+                dragConstraints={{ top: 0, bottom: 0 }}
+                dragElastic={{ top: 0, bottom: 0.6 }}
+                onDragEnd={(_, info) => {
+                  if (info.offset.y > 35 || info.velocity.y > 250) {
+                    stop();
+                  }
+                }}
+                className="relative w-full rounded-b-[24px] shadow-[0_4px_14px_rgba(0,0,0,0.22)] touch-none cursor-grab active:cursor-grabbing"
+              >
+                <div className="relative w-full rounded-b-[24px] border-b border-white/10 bg-white/[0.04] overflow-hidden">
+                  <MobileMiniPlayer />
+                </div>
+              </motion.div>
             </motion.div>
           )}
         </AnimatePresence>
@@ -114,50 +130,49 @@ export function LiquidGlassNav() {
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerUp}
           onTouchMove={handleTouchMove}
-          className="relative w-full h-14 p-[3px] flex items-center justify-between touch-none cursor-pointer"
+          className="relative w-full h-14 bg-transparent p-[3px] flex items-center justify-between touch-none cursor-pointer"
         >
+          {/* Navigation Tabs */}
+          {tabs.map((tab) => {
+            const isActive = activeTab === tab.id;
+            const Icon = tab.icon;
 
-        {/* Navigation Tabs */}
-        {tabs.map((tab) => {
-          const isActive = activeTab === tab.id;
-          const Icon = tab.icon;
-
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => handleTabClick(tab.id)}
-              className="relative flex-1 h-full rounded-full flex flex-col items-center justify-center gap-0.5 z-10 transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-white/30"
-            >
-              {/* Active Sliding Indicator (Clean Dark Matte Pill as in Pic 2) */}
-              {isActive && (
-                <motion.div
-                  layoutId="activeLiquidGlassIndicator"
-                  transition={{
-                    type: "spring",
-                    stiffness: 350,
-                    damping: 30,
-                  }}
-                  className="absolute inset-0 pointer-events-none z-0 rounded-full bg-black/45 shadow-[inset_0_1px_1px_rgba(255,255,255,0.06)] border border-white/5"
-                />
-              )}
-
-              {/* Icon & Label Typography */}
-              <div
-                className={`relative z-10 flex flex-col items-center justify-center transition-all duration-200 ${
-                  isActive
-                    ? "text-white font-medium scale-105"
-                    : "text-white/60 hover:text-white/80 font-normal"
-                }`}
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => handleTabClick(tab.id)}
+                className="relative flex-1 h-full rounded-full flex flex-col items-center justify-center gap-0.5 z-10 transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-white/30"
               >
-                <Icon className="w-5 h-5 transition-transform" />
-                <span className="text-[10.5px] font-medium tracking-tight mt-0.5 leading-none">
-                  {tab.label}
-                </span>
-              </div>
-            </button>
-          );
-        })}
+                {/* Active Sliding Indicator (Clean Dark Matte Pill as in Pic 2) */}
+                {isActive && (
+                  <motion.div
+                    layoutId="activeLiquidGlassIndicator"
+                    transition={{
+                      type: "spring",
+                      stiffness: 350,
+                      damping: 30,
+                    }}
+                    className="absolute inset-0 pointer-events-none z-0 rounded-full bg-black/45 shadow-[inset_0_1px_1px_rgba(255,255,255,0.06)] border border-white/5"
+                  />
+                )}
+
+                {/* Icon & Label Typography */}
+                <div
+                  className={`relative z-10 flex flex-col items-center justify-center transition-all duration-200 ${
+                    isActive
+                      ? "text-white font-medium scale-105"
+                      : "text-white/60 hover:text-white/80 font-normal"
+                  }`}
+                >
+                  <Icon className="w-5 h-5 transition-transform" />
+                  <span className="text-[10.5px] font-medium tracking-tight mt-0.5 leading-none">
+                    {tab.label}
+                  </span>
+                </div>
+              </button>
+            );
+          })}
         </div>
       </div>
     </nav>
