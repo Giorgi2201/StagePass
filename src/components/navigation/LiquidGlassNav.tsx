@@ -1,28 +1,17 @@
 "use client";
 
-import React, { useRef, useState, useCallback, useEffect } from "react";
-import { motion } from "framer-motion";
+import React, { useRef, useState, useCallback } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { useNavigation, type NavigationTab } from "@/context/NavigationContext";
+import { useAudio } from "@/context/AudioContext";
+import { MobileMiniPlayer } from "@/components/player/MiniPlayer";
 
 export function LiquidGlassNav() {
   const { activeTab, setActiveTab, tabs } = useNavigation();
+  const { activeTrack } = useAudio();
   const navRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const [isSliding, setIsSliding] = useState(false);
-  const slidingTimerRef = useRef<NodeJS.Timeout | null>(null);
   const lastZoneIndexRef = useRef<number>(-1);
-
-  // Active optical lens state: true during continuous dragging or spring transitions
-  const isLensActive = isDragging || isSliding;
-
-  // Clean up timer on unmount
-  useEffect(() => {
-    return () => {
-      if (slidingTimerRef.current) {
-        clearTimeout(slidingTimerRef.current);
-      }
-    };
-  }, []);
 
   // Dynamic zone detection during continuous horizontal dragging/scrubbing
   const updateTabFromPointer = useCallback(
@@ -48,10 +37,6 @@ export function LiquidGlassNav() {
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     setIsDragging(true);
-    setIsSliding(true);
-    if (slidingTimerRef.current) {
-      clearTimeout(slidingTimerRef.current);
-    }
     lastZoneIndexRef.current = tabs.findIndex((t) => t.id === activeTab);
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     updateTabFromPointer(e.clientX);
@@ -65,14 +50,6 @@ export function LiquidGlassNav() {
   const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
     if (isDragging) {
       setIsDragging(false);
-      // Keep lens active briefly while settling with spring physics
-      if (slidingTimerRef.current) {
-        clearTimeout(slidingTimerRef.current);
-      }
-      slidingTimerRef.current = setTimeout(() => {
-        setIsSliding(false);
-      }, 260);
-
       try {
         (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
       } catch {
@@ -89,41 +66,56 @@ export function LiquidGlassNav() {
 
   const handleTabClick = (tabId: NavigationTab) => {
     if (tabId !== activeTab) {
-      setIsSliding(true);
-      if (slidingTimerRef.current) {
-        clearTimeout(slidingTimerRef.current);
-      }
-      slidingTimerRef.current = setTimeout(() => {
-        setIsSliding(false);
-      }, 280);
       setActiveTab(tabId);
     }
   };
 
   return (
     <nav
-      aria-label="Mobile Navigation"
-      className="md:hidden fixed bottom-[max(12px,calc(env(safe-area-inset-bottom,0px)-6px))] left-1/2 -translate-x-1/2 z-40 w-[calc(100%-2.5rem)] max-w-sm pointer-events-auto select-none"
+      aria-label="Mobile Navigation and Player Dock"
+      className="md:hidden fixed bottom-[max(12px,calc(env(safe-area-inset-bottom,0px)-6px))] left-1/2 -translate-x-1/2 z-40 w-[calc(100%-2rem)] max-w-sm pointer-events-auto select-none"
       style={{
         bottom: "max(12px, calc(env(safe-area-inset-bottom, 0px) - 6px))",
       }}
     >
       {/* =========================================================
-          OUTER CAPSULE BAR (Wise-Inspired Native iOS Proportions)
-          Slim 56px height, soft smoky frosted glass appearance with
-          deep backdrop blur and muted semi-transparent charcoal tint
+          UNIFIED TWO-TIER LIQUID GLASS DOCK
+          A single continuous frosted glass card enclosing both
+          the mini-player and the navigation tabs with zero seams,
+          zero transparent corner cutouts, and uniform glass tone.
          ========================================================= */}
-      <div
-        ref={navRef}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onPointerCancel={handlePointerUp}
-        onTouchMove={handleTouchMove}
-        className="relative h-14 rounded-full bg-[#232724]/60 backdrop-blur-2xl border border-white/10 p-[3px] flex items-center justify-between shadow-[0_12px_40px_0_rgba(0,0,0,0.45),inset_0_1px_1px_rgba(255,255,255,0.1)] touch-none cursor-pointer"
-      >
+      <div className="relative w-full rounded-[28px] bg-[#1c1f1d]/85 backdrop-blur-2xl border border-white/10 shadow-[0_12px_40px_0_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.1)] overflow-hidden flex flex-col transition-[border-radius] duration-300">
         {/* Subtle Specular Top Hairline Reflection */}
-        <div className="absolute top-0 left-6 right-6 h-[1px] bg-gradient-to-r from-transparent via-white/15 to-transparent pointer-events-none" />
+        <div className="absolute top-0 left-6 right-6 h-[1px] bg-gradient-to-r from-transparent via-white/15 to-transparent pointer-events-none z-20" />
+
+        {/* Tier 1: Conjoined Mobile Mini-Player (slides down/up inside the single unified card) */}
+        <AnimatePresence>
+          {activeTrack && (
+            <motion.div
+              key="unified-mobile-mini-player-tier"
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ type: "spring", damping: 26, stiffness: 280 }}
+              className="w-full overflow-hidden"
+            >
+              <MobileMiniPlayer />
+              {/* Subtle hairline divider between mini-player and navigation */}
+              <div className="w-full h-[1px] bg-white/[0.08]" />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Tier 2: Liquid Glass Navigation Capsule Track */}
+        <div
+          ref={navRef}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerUp}
+          onTouchMove={handleTouchMove}
+          className="relative w-full h-14 p-[3px] flex items-center justify-between touch-none cursor-pointer"
+        >
 
         {/* Navigation Tabs */}
         {tabs.map((tab) => {
@@ -137,106 +129,17 @@ export function LiquidGlassNav() {
               onClick={() => handleTabClick(tab.id)}
               className="relative flex-1 h-full rounded-full flex flex-col items-center justify-center gap-0.5 z-10 transition-colors cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-white/30"
             >
-              {/* Active Sliding Indicator (Unified Liquid Glass Capsule) */}
+              {/* Active Sliding Indicator (Clean Dark Matte Pill as in Pic 2) */}
               {isActive && (
                 <motion.div
                   layoutId="activeLiquidGlassIndicator"
                   transition={{
                     type: "spring",
-                    stiffness: 300,
-                    damping: 25,
-                    mass: 0.8,
+                    stiffness: 350,
+                    damping: 30,
                   }}
-                  className="absolute inset-0 pointer-events-none z-0"
-                >
-                  {/* Physical Expanding Lens Bead:
-                      When resting: sits flush inside 3px padding with subtle dark backing.
-                      When sliding/dragging: smoothly scales up (~124% Y, ~106% X) so its rounded
-                      top and bottom lips gently bulge 2.5px beyond the 56px capsule track. */}
-                  <motion.div
-                    animate={{
-                      scaleY: isLensActive ? 1.24 : 1.0,
-                      scaleX: isLensActive ? 1.06 : 1.0,
-                    }}
-                    transition={{
-                      type: "spring",
-                      stiffness: 300,
-                      damping: 25,
-                    }}
-                    className="relative w-full h-full rounded-full"
-                  >
-                    {/* =========================================================
-                        1. STATE A: FLUSH IDLE BACKING (Reference Picture 2)
-                        Muted, flush, soft dark matte thumb with no rainbow lines
-                       ========================================================= */}
-                    <div
-                      className={`absolute inset-0 rounded-full transition-all duration-250 ${
-                        isLensActive
-                          ? "bg-black/25 shadow-none"
-                          : "bg-black/45 shadow-[inset_0_1px_1px_rgba(255,255,255,0.06)]"
-                      }`}
-                    />
-
-                    {/* =========================================================
-                        2. STATE B: UNIFIED LIQUID GLASS LENS (Reference Picture 3)
-                        Active strictly during drag / sliding spring glide
-                       ========================================================= */}
-                    <div
-                      className={`absolute inset-0 rounded-full transition-opacity duration-200 ease-out ${
-                        isLensActive ? "opacity-100" : "opacity-0 pointer-events-none"
-                      }`}
-                    >
-                      {/* Optical Glass Base: real transparency with backdrop blur, external shadow, and hairline rim */}
-                      <div className="absolute inset-0 rounded-full bg-white/[0.04] backdrop-blur-md shadow-lg shadow-black/50 border border-white/[0.18]" />
-
-                      {/* Specular edge reflections hugging the curved upper & lower lips */}
-                      <div className="absolute inset-0 rounded-full shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),inset_0_-1px_1px_rgba(255,255,255,0.1)] pointer-events-none" />
-
-                      {/* Delicate razor-thin dark contour defining the physical glass edge against background */}
-                      <div className="absolute inset-0 rounded-full border border-black/40 pointer-events-none" />
-
-                      {/* Deep curved refractive shadow meniscus hugging the rounded top and bottom rims */}
-                      <div className="absolute inset-0 rounded-full shadow-[inset_0_4px_7px_rgba(0,0,0,0.7),inset_0_-4px_7px_rgba(0,0,0,0.7)] pointer-events-none" />
-
-                      {/* =====================================================
-                          3. CURVED CHROMATIC MENISCUS (Natural Glass Refraction)
-                          Shares the exact rounded-full pill geometry of the lens.
-                          Masked to the curved upper and lower arcs at ~38% opacity.
-                         ===================================================== */}
-                      <div
-                        className="absolute inset-0 rounded-full pointer-events-none overflow-hidden"
-                        style={{
-                          maskImage:
-                            "linear-gradient(to bottom, black 0%, black 22%, transparent 38%, transparent 62%, black 78%, black 100%)",
-                          WebkitMaskImage:
-                            "linear-gradient(to bottom, black 0%, black 22%, transparent 38%, transparent 62%, black 78%, black 100%)",
-                        }}
-                      >
-                        {/* Curved Prismatic Ring along the exact rounded-full contour */}
-                        <div
-                          className="absolute inset-0 rounded-full border-[2.5px] border-transparent opacity-38 blur-[1px]"
-                          style={{
-                            background:
-                              "linear-gradient(90deg, rgba(56,189,248,0.75) 0%, rgba(168,85,247,0.7) 48%, rgba(251,191,36,0.75) 100%) border-box",
-                            WebkitMask:
-                              "linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0)",
-                            WebkitMaskComposite: "xor",
-                            maskComposite: "exclude",
-                          }}
-                        />
-
-                        {/* Soft ambient optical dispersion bleed through the curved crystal glass */}
-                        <div
-                          className="absolute inset-0 rounded-full opacity-25 blur-[3px]"
-                          style={{
-                            background:
-                              "linear-gradient(90deg, rgba(56,189,248,0.5) 0%, rgba(192,132,252,0.45) 50%, rgba(251,191,36,0.5) 100%)",
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </motion.div>
-                </motion.div>
+                  className="absolute inset-0 pointer-events-none z-0 rounded-full bg-black/45 shadow-[inset_0_1px_1px_rgba(255,255,255,0.06)] border border-white/5"
+                />
               )}
 
               {/* Icon & Label Typography */}
@@ -255,6 +158,7 @@ export function LiquidGlassNav() {
             </button>
           );
         })}
+        </div>
       </div>
     </nav>
   );

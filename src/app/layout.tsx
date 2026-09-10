@@ -7,6 +7,7 @@ import { AudioProvider } from "@/context/AudioContext";
 import { Navbar } from "@/components/Navbar";
 import { LiquidGlassNav } from "@/components/navigation/LiquidGlassNav";
 import { MiniPlayer } from "@/components/player/MiniPlayer";
+import { MaximizedPlayer } from "@/components/player/MaximizedPlayer";
 import { OfflineBanner } from "@/components/pwa/OfflineBanner";
 import { InstallPrompt } from "@/components/pwa/InstallPrompt";
 import { SplashScreen } from "@/components/pwa/SplashScreen";
@@ -75,6 +76,7 @@ export default function RootLayout({
               <Navbar />
               {children}
               <MiniPlayer />
+              <MaximizedPlayer />
               <LiquidGlassNav />
               <InstallPrompt />
             </AudioProvider>

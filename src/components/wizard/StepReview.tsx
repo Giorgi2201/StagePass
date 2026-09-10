@@ -53,10 +53,21 @@ export function StepReview() {
     isLoadingAudio,
     toggleTrack: toggleAudioPlayback,
     stop: stopAudio,
+    setQueue,
   } = useAudio();
   const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
   const [isSpotifyModalOpen, setIsSpotifyModalOpen] = useState(false);
   const [isResolvingYouTube, setIsResolvingYouTube] = useState(false);
+
+  // Sync active concert tracks into global audio queue for next/prev navigation
+  useEffect(() => {
+    if (parseResult?.tracks) {
+      const activeTracks = parseResult.tracks.filter(
+        (_, index) => !excludedTrackIndices.has(index)
+      );
+      setQueue(activeTracks.length > 0 ? activeTracks : parseResult.tracks);
+    }
+  }, [parseResult, excludedTrackIndices, setQueue]);
 
   // Auto-dismiss audio preview if the setlist is cleared or parseResult resets
   useEffect(() => {

@@ -123,3 +123,27 @@ textarea {
   will-change: opacity, visibility;
 }
 
+/* Continuous Vinyl Record Rotation for Maximized Player */
+@keyframes spinRecord {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin-record {
+  animation: spinRecord 20s linear infinite;
+  will-change: transform;
+}
+
+/* Hide scrollbar for Chrome, Safari, and Firefox */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+

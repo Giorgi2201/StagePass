@@ -3,7 +3,7 @@
 import React, { useRef } from "react";
 import { useAudio } from "@/context/AudioContext";
 import { AnimatePresence, motion } from "framer-motion";
-import { Play, Pause, X, Loader2, Music2 } from "lucide-react";
+import { Play, Pause, SkipForward, X, Loader2, Music2 } from "lucide-react";
 
 function formatTime(seconds: number): string {
   if (isNaN(seconds) || seconds < 0) return "0:00";
@@ -12,6 +12,121 @@ function formatTime(seconds: number): string {
   return `${mins}:${secs.toString().padStart(2, "0")}`;
 }
 
+/**
+ * Mobile Mini-Player Tier:
+ * Baked directly into the top of the unified Liquid Glass dock card.
+ * Features full-panel translucent Spotify Green progress wash,
+ * squircle album artwork, and minimalist line controls.
+ */
+export function MobileMiniPlayer() {
+  const {
+    activeTrack,
+    artistName,
+    artworkUrl,
+    isPlaying,
+    isLoadingAudio,
+    progress,
+    pause,
+    resume,
+    skipNext,
+    setIsExpanded,
+  } = useAudio();
+
+  if (!activeTrack) {
+    return null;
+  }
+
+  const handleTogglePlayPause = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isPlaying) {
+      pause();
+    } else {
+      resume();
+    }
+  };
+
+  return (
+    <div
+      onClick={() => setIsExpanded(true)}
+      className="relative w-full p-2.5 px-3.5 flex items-center justify-between cursor-pointer active:scale-[0.99] transition-transform select-none"
+      title="Tap to expand player"
+    >
+      {/* Full-Panel Background Progress Fill (Spotify Green wash sweeping 0% to 100%) */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div
+          className="h-full bg-gradient-to-r from-[#1DB954]/20 via-[#1DB954]/25 to-[#1DB954]/35 border-r border-[#1DB954]/60 transition-[width] duration-150 ease-linear shadow-[0_0_15px_rgba(29,185,84,0.35)]"
+          style={{
+            width: `${Math.min(Math.max(progress * 100, 0), 100)}%`,
+          }}
+        />
+      </div>
+
+      {/* Left: Rounded squircle album artwork thumbnail */}
+      <div className="relative w-12 h-12 rounded-xl overflow-hidden bg-neutral-900 shrink-0 flex items-center justify-center shadow-sm z-10 ring-1 ring-white/10">
+        {artworkUrl ? (
+          <img
+            src={artworkUrl}
+            alt={activeTrack.name}
+            className="w-full h-full object-cover select-none pointer-events-none"
+          />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-tr from-neutral-800 to-neutral-900 flex items-center justify-center">
+            <Music2 className="w-5 h-5 text-white/80" />
+          </div>
+        )}
+      </div>
+
+      {/* Center: Track Title & Artist Name */}
+      <div className="flex-1 min-w-0 mx-3 flex flex-col justify-center z-10">
+        <span className="text-sm font-bold text-white truncate leading-snug">
+          {activeTrack.name}
+        </span>
+        <span className="text-xs text-neutral-400 truncate leading-snug mt-0.5">
+          {artistName || "Preview"}
+        </span>
+      </div>
+
+      {/* Right: Minimalist Line Controls (Play/Pause & Skip Next) */}
+      <div className="flex items-center gap-3 shrink-0 z-10 pr-1">
+        <button
+          type="button"
+          onClick={handleTogglePlayPause}
+          disabled={isLoadingAudio}
+          className="p-1.5 text-white hover:text-white/80 active:scale-90 transition-all cursor-pointer disabled:opacity-50"
+          title={isPlaying ? "Pause Preview" : "Play Preview"}
+          aria-label={isPlaying ? "Pause Preview" : "Play Preview"}
+        >
+          {isLoadingAudio ? (
+            <Loader2 className="w-5 h-5 animate-spin text-white" />
+          ) : isPlaying ? (
+            <Pause className="w-5 h-5 fill-white text-white" />
+          ) : (
+            <Play className="w-5 h-5 fill-white text-white ml-0.5" />
+          )}
+        </button>
+
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            skipNext();
+          }}
+          className="p-1.5 text-white/80 hover:text-white active:scale-90 transition-all cursor-pointer"
+          title="Skip Next"
+          aria-label="Skip Next"
+        >
+          <SkipForward className="w-5 h-5 fill-current" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Desktop Spotify Player Dock:
+ * Full-width 3-column Spotify Web Player layout with 30s scrubber.
+ * Only renders on desktop (`hidden md:flex`).
+ */
 export function MiniPlayer() {
   const {
     activeTrack,
@@ -26,6 +141,7 @@ export function MiniPlayer() {
     resume,
     seek,
     stop,
+    setIsExpanded,
   } = useAudio();
 
   const desktopScrubberRef = useRef<HTMLDivElement>(null);
@@ -55,109 +171,25 @@ export function MiniPlayer() {
   return (
     <AnimatePresence>
       <motion.div
-        key="global-audio-player"
+        key="desktop-audio-player-dock"
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: 20, opacity: 0 }}
         transition={{ type: "spring", damping: 26, stiffness: 320 }}
         className="contents"
       >
-        {/* =========================================================================
-            1. MOBILE LIQUID GLASS MINI-PLAYER (md:hidden)
-            Pill-shaped capsule matching the liquid glass navbar, docked cleanly above
-           ========================================================================= */}
-        <aside
-          aria-label="Mobile Audio Preview Player"
-          className="md:hidden fixed left-1/2 -translate-x-1/2 z-35 w-[calc(100%-2.5rem)] max-w-sm bottom-[calc(max(12px,calc(env(safe-area-inset-bottom,0px)-6px))+3.75rem+8px)] pointer-events-auto select-none"
-          style={{
-            bottom: "calc(max(12px, calc(env(safe-area-inset-bottom, 0px) - 6px)) + 3.75rem + 8px)",
-          }}
-        >
-          <div className="relative overflow-hidden rounded-full bg-black/65 backdrop-blur-2xl border border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] p-2 pl-2.5 pr-2.5 flex items-center justify-between gap-3">
-            {/* Specular top hairline reflection */}
-            <div className="absolute top-0 left-6 right-6 h-[1px] bg-gradient-to-r from-transparent via-white/15 to-transparent pointer-events-none" />
-
-            {/* Left: Circular Album Artwork Thumbnail */}
-            <div className="relative w-9 h-9 rounded-full overflow-hidden ring-1 ring-white/15 bg-neutral-900 shrink-0 flex items-center justify-center shadow-inner">
-              {artworkUrl ? (
-                // Using standard img for external dynamic CDNs (iTunes & Spotify)
-                <img
-                  src={artworkUrl}
-                  alt={activeTrack.name}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full bg-gradient-to-tr from-[#1DB954]/20 to-neutral-800 flex items-center justify-center">
-                  <Music2 className="w-4 h-4 text-[#1DB954]" />
-                </div>
-              )}
-            </div>
-
-            {/* Middle: Track Title & Artist Name */}
-            <div className="flex-1 min-w-0 flex flex-col justify-center">
-              <span className="text-xs font-bold text-white truncate leading-tight">
-                {activeTrack.name}
-              </span>
-              <span className="text-[11px] text-neutral-400 truncate leading-tight mt-0.5">
-                {artistName || "Preview"}
-              </span>
-            </div>
-
-            {/* Right: Controls (Play/Pause + Close) */}
-            <div className="flex items-center gap-1.5 shrink-0">
-              {/* Circular Play / Pause Button */}
-              <button
-                type="button"
-                onClick={handleTogglePlayPause}
-                disabled={isLoadingAudio}
-                className="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center hover:scale-105 active:scale-95 transition-transform shadow-md cursor-pointer disabled:opacity-75"
-                title={isPlaying ? "Pause Preview" : "Play Preview"}
-                aria-label={isPlaying ? "Pause Preview" : "Play Preview"}
-              >
-                {isLoadingAudio ? (
-                  <Loader2 className="w-4 h-4 animate-spin text-black" />
-                ) : isPlaying ? (
-                  <Pause className="w-4 h-4 fill-black text-black" />
-                ) : (
-                  <Play className="w-4 h-4 fill-black text-black ml-0.5" />
-                )}
-              </button>
-
-              {/* Close Button ('X') */}
-              <button
-                type="button"
-                onClick={() => stop()}
-                className="p-1.5 rounded-full text-neutral-400 hover:text-white active:scale-90 transition-all cursor-pointer"
-                title="Dismiss Player"
-                aria-label="Dismiss Player"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Hairline Curved Progress Bar at Bottom of Pill */}
-            <div className="absolute bottom-0 left-3 right-3 h-[2px] bg-white/10 overflow-hidden rounded-full pointer-events-none">
-              <div
-                className="h-full bg-[#1DB954] transition-all duration-100 ease-linear rounded-full"
-                style={{
-                  width: `${Math.min(Math.max(progress * 100, 0), 100)}%`,
-                }}
-              />
-            </div>
-          </div>
-        </aside>
-
-        {/* =========================================================================
-            2. DESKTOP SPOTIFY PLAYER DOCK (hidden md:flex)
-            Full-width 3-column Spotify Web Player layout with 30s scrubber
-           ========================================================================= */}
+        {/* Desktop Spotify Player Dock (hidden md:flex) */}
         <aside
           aria-label="Desktop Spotify Audio Preview Player"
           className="hidden md:flex fixed bottom-0 left-0 right-0 z-40 h-20 bg-[#181818]/95 backdrop-blur-xl border-t border-white/10 px-6 items-center justify-between shadow-[0_-10px_30px_rgba(0,0,0,0.5)] select-none pointer-events-auto"
         >
           {/* Column 1 (Left - Now Playing Info) */}
-          <div className="flex items-center gap-3.5 min-w-[200px] max-w-[30%] shrink-0">
-            <div className="w-14 h-14 rounded-md overflow-hidden bg-neutral-900 ring-1 ring-white/10 shadow-md shrink-0 relative flex items-center justify-center">
+          <div
+            onClick={() => setIsExpanded(true)}
+            className="flex items-center gap-3.5 min-w-[200px] max-w-[30%] shrink-0 cursor-pointer group"
+            title="Click to expand Now Playing showcase"
+          >
+            <div className="w-14 h-14 rounded-md overflow-hidden bg-neutral-900 ring-1 ring-white/10 group-hover:ring-[#1DB954]/50 shadow-md shrink-0 relative flex items-center justify-center transition-all">
               {artworkUrl ? (
                 <img
                   src={artworkUrl}
@@ -194,7 +226,6 @@ export function MiniPlayer() {
 
           {/* Column 2 (Center - Playback Controls & 30s Scrubber Timeline) */}
           <div className="flex-1 max-w-lg flex flex-col items-center gap-1.5 px-4">
-            {/* Primary Center Playback Button */}
             <button
               type="button"
               onClick={handleTogglePlayPause}
@@ -212,14 +243,11 @@ export function MiniPlayer() {
               )}
             </button>
 
-            {/* Scrubber Row */}
             <div className="w-full flex items-center justify-between gap-2.5">
-              {/* Current Time Indicator */}
               <span className="text-[11px] text-neutral-400 font-mono tabular-nums select-none min-w-[28px] text-right">
                 {formatTime(currentTime)}
               </span>
 
-              {/* Scrubber Track Bar */}
               <div
                 ref={desktopScrubberRef}
                 onClick={handleScrubberClick}
@@ -234,7 +262,6 @@ export function MiniPlayer() {
                 />
               </div>
 
-              {/* Total Duration Indicator */}
               <span className="text-[11px] text-neutral-400 font-mono tabular-nums select-none min-w-[28px]">
                 {formatTime(duration || 30)}
               </span>

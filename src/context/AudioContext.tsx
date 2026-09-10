@@ -28,6 +28,16 @@ interface AudioContextType {
   toggleTrack: (track: NormalizedTrack, artistName: string) => void;
   seek: (seconds: number) => void;
   stop: () => void;
+  // Queue, Expansion & Navigation
+  isExpanded: boolean;
+  setIsExpanded: (expanded: boolean) => void;
+  queue: NormalizedTrack[];
+  setQueue: (tracks: NormalizedTrack[]) => void;
+  isLooping: boolean;
+  setIsLooping: (looping: boolean) => void;
+  toggleLoop: () => void;
+  skipNext: () => void;
+  skipPrevious: () => void;
 }
 
 const AudioContext = createContext<AudioContextType | undefined>(undefined);
@@ -45,6 +55,35 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [duration, setDuration] = useState<number>(30);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Queue, Expansion & Loop States
+  const [isExpanded, setIsExpanded] = useState<boolean>(false);
+  const [queue, setQueue] = useState<NormalizedTrack[]>([]);
+  const [isLooping, setIsLooping] = useState<boolean>(false);
+
+  // Sync refs to avoid stale closures in audio event listeners
+  const activeTrackRef = useRef<NormalizedTrack | null>(null);
+  const artistNameRef = useRef<string | null>(null);
+  const queueRef = useRef<NormalizedTrack[]>([]);
+  const isLoopingRef = useRef<boolean>(false);
+
+  useEffect(() => {
+    activeTrackRef.current = activeTrack;
+  }, [activeTrack]);
+
+  useEffect(() => {
+    artistNameRef.current = artistName;
+  }, [artistName]);
+
+  useEffect(() => {
+    queueRef.current = queue;
+  }, [queue]);
+
+  useEffect(() => {
+    isLoopingRef.current = isLooping;
+  }, [isLooping]);
+
+  const playTrackRef = useRef<(track: NormalizedTrack, artist: string) => Promise<void>>(async () => {});
 
   // Initialize and bind single HTML5 Audio element
   useEffect(() => {
@@ -78,11 +117,43 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
       setIsPlaying(false);
       setProgress(0);
       setCurrentTime(0);
-      // Auto-dismiss mini player when track finishes
+
+      // 1. If single-track loop is enabled, replay current stream
+      if (isLoopingRef.current && audio.src) {
+        audio.currentTime = 0;
+        audio.play().catch((err) => console.warn("[Audio] Loop replay failed:", err));
+        return;
+      }
+
+      // 2. If queue contains multiple songs, auto-advance to next setlist track
+      const q = queueRef.current;
+      const current = activeTrackRef.current;
+      const artist = artistNameRef.current;
+      if (q && q.length > 1 && artist && playTrackRef.current) {
+        const currentIndex = q.findIndex(
+          (t) =>
+            (t.id && current?.id && t.id === current.id) ||
+            t.name.toLowerCase() === current?.name.toLowerCase()
+        );
+        let nextIndex = 0;
+        if (currentIndex !== -1 && currentIndex + 1 < q.length) {
+          nextIndex = currentIndex + 1;
+        } else {
+          nextIndex = 0;
+        }
+        const nextTrack = q[nextIndex];
+        if (nextTrack) {
+          playTrackRef.current(nextTrack, artist);
+          return;
+        }
+      }
+
+      // 3. Fallback: dismiss active track when finished
       setActiveTrack(null);
       setArtistName(null);
       setPreviewUrl(null);
       setArtworkUrl(null);
+      setIsExpanded(false);
     };
 
     const onError = () => {
@@ -135,6 +206,7 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
     setProgress(0);
     setCurrentTime(0);
     setErrorMessage(null);
+    setIsExpanded(false);
   }, []);
 
   const pause = useCallback(() => {
@@ -224,6 +296,10 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
+  useEffect(() => {
+    playTrackRef.current = playTrack;
+  }, [playTrack]);
+
   const toggleTrack = useCallback(
     (track: NormalizedTrack, artist: string) => {
       // If clicking the currently active track, toggle playback
@@ -258,6 +334,69 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
     [duration]
   );
 
+  const toggleLoop = useCallback(() => {
+    setIsLooping((prev) => !prev);
+  }, []);
+
+  const skipNext = useCallback(() => {
+    const q = queueRef.current;
+    const current = activeTrackRef.current;
+    const artist = artistNameRef.current;
+    if (!q || q.length === 0 || !artist) return;
+
+    const currentIndex = q.findIndex(
+      (t) =>
+        (t.id && current?.id && t.id === current.id) ||
+        t.name.toLowerCase() === current?.name.toLowerCase()
+    );
+
+    let nextIndex = 0;
+    if (currentIndex !== -1 && currentIndex + 1 < q.length) {
+      nextIndex = currentIndex + 1;
+    } else {
+      nextIndex = 0;
+    }
+
+    const nextTrack = q[nextIndex];
+    if (nextTrack) {
+      playTrack(nextTrack, artist);
+    }
+  }, [playTrack]);
+
+  const skipPrevious = useCallback(() => {
+    const q = queueRef.current;
+    const current = activeTrackRef.current;
+    const artist = artistNameRef.current;
+    const audio = audioRef.current;
+
+    if (audio && audio.currentTime > 3) {
+      audio.currentTime = 0;
+      setCurrentTime(0);
+      setProgress(0);
+      return;
+    }
+
+    if (!q || q.length === 0 || !artist) return;
+
+    const currentIndex = q.findIndex(
+      (t) =>
+        (t.id && current?.id && t.id === current.id) ||
+        t.name.toLowerCase() === current?.name.toLowerCase()
+    );
+
+    let prevIndex = q.length - 1;
+    if (currentIndex > 0) {
+      prevIndex = currentIndex - 1;
+    } else {
+      prevIndex = Math.max(0, q.length - 1);
+    }
+
+    const prevTrack = q[prevIndex];
+    if (prevTrack) {
+      playTrack(prevTrack, artist);
+    }
+  }, [playTrack]);
+
   return (
     <AudioContext.Provider
       value={{
@@ -277,6 +416,15 @@ export function AudioProvider({ children }: { children: React.ReactNode }) {
         toggleTrack,
         seek,
         stop,
+        isExpanded,
+        setIsExpanded,
+        queue,
+        setQueue,
+        isLooping,
+        setIsLooping,
+        toggleLoop,
+        skipNext,
+        skipPrevious,
       }}
     >
       {children}
