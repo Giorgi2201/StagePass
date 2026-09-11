@@ -21,6 +21,18 @@ import { exportPlaylistCover } from "@/lib/cover-export";
 export type WizardStep = "search" | "shows" | "review" | "success";
 export type WizardMode = "rehearsal" | "memory" | "essential";
 
+export interface WizardStepItem {
+  id: WizardStep;
+  label: string;
+}
+
+export const WIZARD_STEPS: readonly WizardStepItem[] = [
+  { id: "search", label: "Search Artist" },
+  { id: "shows", label: "Tour & Mode" },
+  { id: "review", label: "Review Setlist" },
+  { id: "success", label: "Playlist & Stubs" },
+] as const;
+
 interface WizardContextType {
   step: WizardStep;
   mode: WizardMode;

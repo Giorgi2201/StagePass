@@ -182,7 +182,7 @@ export function StepReview() {
     : selectedShow?.eventDate || "LIVE 2026";
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300 pb-5 sm:pb-6">
+    <div className="w-full space-y-6 animate-in fade-in duration-300 pb-5 sm:pb-6">
       {/* Offscreen DOM Mounting: 640x640 Tour Poster for Playlist Cover Art Snapshotting */}
       <div
         className="fixed -left-[9999px] top-0 pointer-events-none opacity-0 select-none"
@@ -239,11 +239,11 @@ export function StepReview() {
 
         {/* Venue / Tour Meta */}
         <div className="text-left sm:text-right space-y-0.5">
-          <div className="text-xs sm:text-sm font-semibold text-zinc-300 truncate max-w-xs">
+          <div className="text-xs sm:text-sm font-semibold text-zinc-300 truncate max-w-md xl:max-w-xl">
             {parseResult.venueInfo}
           </div>
           {parseResult.tourName && (
-            <div className="text-[11px] text-[#B3B3B3] truncate max-w-xs">
+            <div className="text-[11px] text-[#B3B3B3] truncate max-w-md xl:max-w-xl">
               {parseResult.tourName}
             </div>
           )}
@@ -570,7 +570,7 @@ export function StepReview() {
         </div>
 
         {/* Action Buttons: Clean Vertical Ladder */}
-        <div className="flex flex-col gap-3 w-full max-w-md mx-auto mt-6">
+        <div className="flex flex-col gap-3 w-full max-w-xl mx-auto mt-6">
           {/* Rung 1: Export to YouTube */}
           <button
             type="button"

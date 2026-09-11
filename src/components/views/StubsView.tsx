@@ -67,7 +67,7 @@ export function StubsView() {
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
+    <div className="w-full space-y-8 animate-in fade-in duration-300">
       {/* View Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-neutral-800/80">
         <div>
@@ -168,7 +168,7 @@ export function StubsView() {
         </div>
       ) : (
         /* Ticket Stubs Grid */
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-5">
           {tickets.map((ticket) => {
             const isDeleting = ticketToDelete === ticket.id;
 

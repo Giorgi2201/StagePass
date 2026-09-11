@@ -3,7 +3,7 @@
 import React, { useRef } from "react";
 import { useAudio } from "@/context/AudioContext";
 import { AnimatePresence, motion } from "framer-motion";
-import { Play, Pause, SkipForward, X, Loader2, Music2 } from "lucide-react";
+import { Play, Pause, SkipBack, SkipForward, X, Loader2, Music2 } from "lucide-react";
 
 function formatTime(seconds: number): string {
   if (isNaN(seconds) || seconds < 0) return "0:00";
@@ -143,7 +143,8 @@ export function MiniPlayer() {
     resume,
     seek,
     stop,
-    setIsExpanded,
+    skipNext,
+    skipPrevious,
   } = useAudio();
 
   const desktopScrubberRef = useRef<HTMLDivElement>(null);
@@ -185,18 +186,14 @@ export function MiniPlayer() {
           aria-label="Desktop Spotify Audio Preview Player"
           className="hidden md:flex fixed bottom-0 left-0 right-0 z-40 h-20 bg-[#181818]/95 backdrop-blur-xl border-t border-white/10 px-6 items-center justify-between shadow-[0_-10px_30px_rgba(0,0,0,0.5)] select-none pointer-events-auto"
         >
-          {/* Column 1 (Left - Now Playing Info) */}
-          <div
-            onClick={() => setIsExpanded(true)}
-            className="flex items-center gap-3.5 min-w-[200px] max-w-[30%] shrink-0 cursor-pointer group"
-            title="Click to expand Now Playing showcase"
-          >
-            <div className="w-14 h-14 rounded-md overflow-hidden bg-neutral-900 ring-1 ring-white/10 group-hover:ring-[#1DB954]/50 shadow-md shrink-0 relative flex items-center justify-center transition-all">
+          {/* Column 1 (Left - Now Playing Info, Non-expandable on Desktop) */}
+          <div className="flex items-center gap-3.5 min-w-[200px] max-w-[30%] shrink-0">
+            <div className="w-14 h-14 rounded-md overflow-hidden bg-neutral-900 ring-1 ring-white/10 shadow-md shrink-0 relative flex items-center justify-center">
               {artworkUrl ? (
                 <img
                   src={artworkUrl}
                   alt={activeTrack.name}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover select-none pointer-events-none"
                 />
               ) : (
                 <div className="w-full h-full bg-gradient-to-tr from-neutral-800 to-neutral-900 flex items-center justify-center">
@@ -207,44 +204,71 @@ export function MiniPlayer() {
 
             <div className="min-w-0 flex flex-col justify-center">
               <span
-                className="font-medium text-sm text-white truncate hover:underline cursor-pointer"
+                className="font-medium text-sm text-white truncate select-none"
                 title={activeTrack.name}
               >
                 {activeTrack.name}
               </span>
               <span
-                className="text-xs text-neutral-400 truncate mt-0.5"
+                className="text-xs text-neutral-400 truncate mt-0.5 select-none"
                 title={artistName || ""}
               >
                 {artistName || "Unknown Artist"}
               </span>
               <div className="mt-1">
-                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#1DB954]/15 border border-[#1DB954]/30 text-[10px] font-bold text-[#1DB954] uppercase tracking-wider">
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#1DB954]/15 border border-[#1DB954]/30 text-[10px] font-bold text-[#1DB954] uppercase tracking-wider select-none">
                   30s Preview
                 </span>
               </div>
             </div>
           </div>
 
-          {/* Column 2 (Center - Playback Controls & 30s Scrubber Timeline) */}
+          {/* Column 2 (Center - Playback Controls with Previous, Play/Pause, Next & Timeline) */}
           <div className="flex-1 max-w-lg flex flex-col items-center gap-1.5 px-4">
-            <button
-              type="button"
-              onClick={handleTogglePlayPause}
-              disabled={isLoadingAudio}
-              className="w-9 h-9 rounded-full bg-white text-black flex items-center justify-center hover:scale-105 active:scale-95 transition-transform shadow-md cursor-pointer disabled:opacity-75"
-              title={isPlaying ? "Pause Preview" : "Play Preview"}
-              aria-label={isPlaying ? "Pause Preview" : "Play Preview"}
-            >
-              {isLoadingAudio ? (
-                <Loader2 className="w-4 h-4 animate-spin text-black" />
-              ) : isPlaying ? (
-                <Pause className="w-4 h-4 fill-black text-black" />
-              ) : (
-                <Play className="w-4 h-4 fill-black text-black ml-0.5" />
-              )}
-            </button>
+            {/* Center Playback Control Buttons Row */}
+            <div className="flex items-center gap-4">
+              {/* Previous Track */}
+              <button
+                type="button"
+                onClick={skipPrevious}
+                className="text-neutral-400 hover:text-white active:scale-90 transition-all p-1.5 cursor-pointer"
+                title="Previous Track"
+                aria-label="Previous Track"
+              >
+                <SkipBack className="w-5 h-5 fill-current" />
+              </button>
 
+              {/* Play / Pause */}
+              <button
+                type="button"
+                onClick={handleTogglePlayPause}
+                disabled={isLoadingAudio}
+                className="w-9 h-9 rounded-full bg-white text-black flex items-center justify-center hover:scale-105 active:scale-95 transition-transform shadow-md cursor-pointer disabled:opacity-75"
+                title={isPlaying ? "Pause Preview" : "Play Preview"}
+                aria-label={isPlaying ? "Pause Preview" : "Play Preview"}
+              >
+                {isLoadingAudio ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-black" />
+                ) : isPlaying ? (
+                  <Pause className="w-4 h-4 fill-black text-black" />
+                ) : (
+                  <Play className="w-4 h-4 fill-black text-black ml-0.5" />
+                )}
+              </button>
+
+              {/* Next Track */}
+              <button
+                type="button"
+                onClick={skipNext}
+                className="text-neutral-400 hover:text-white active:scale-90 transition-all p-1.5 cursor-pointer"
+                title="Next Track"
+                aria-label="Next Track"
+              >
+                <SkipForward className="w-5 h-5 fill-current" />
+              </button>
+            </div>
+
+            {/* Scrubber Timeline */}
             <div className="w-full flex items-center justify-between gap-2.5">
               <span className="text-[11px] text-neutral-400 font-mono tabular-nums select-none min-w-[28px] text-right">
                 {formatTime(currentTime)}

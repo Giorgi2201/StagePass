@@ -12,8 +12,8 @@ export function Navbar() {
   const { activeTab, setActiveTab, tabs } = useNavigation();
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-[#121212]/90 backdrop-blur-xl border-b border-[#282828] pt-safe transition-all">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+    <header className="sticky top-0 z-40 w-full bg-[#121212]/85 backdrop-blur-xl border-b border-white/5 pt-safe transition-all">
+      <div className="w-full px-6 md:px-10 lg:px-12 h-16 flex items-center justify-between gap-4">
         {/* Brand / Logo (Clicking switches to Setlists tab) */}
         <button
           type="button"

@@ -12,7 +12,6 @@ import {
   Repeat,
   Music2,
   Loader2,
-  X,
   ListMusic,
 } from "lucide-react";
 
@@ -104,22 +103,17 @@ export function MaximizedPlayer() {
   return (
     <AnimatePresence>
       {isExpanded && (
-        <>
-          {/* =========================================================================
-              1. MOBILE FULL-SCREEN LIQUID GLASS PLAYER (md:hidden)
-              Slides up with spring physics, dismissed via top-left chevron button
-             ========================================================================= */}
-          <motion.div
-            key="maximized-player-mobile"
-            initial={{ y: "100%" }}
-            animate={{ y: 0 }}
-            exit={{ y: "100%" }}
-            transition={{ type: "spring", damping: 28, stiffness: 350 }}
-            style={{
-              paddingTop: "calc(env(safe-area-inset-top, 0px) + 12px)",
-            }}
-            className="fixed inset-0 z-50 md:hidden flex flex-col justify-between bg-[#0a0a0a]/95 backdrop-blur-3xl text-white select-none overflow-hidden"
-          >
+        <motion.div
+          key="maximized-player-mobile"
+          initial={{ y: "100%" }}
+          animate={{ y: 0 }}
+          exit={{ y: "100%" }}
+          transition={{ type: "spring", damping: 28, stiffness: 350 }}
+          style={{
+            paddingTop: "calc(env(safe-area-inset-top, 0px) + 12px)",
+          }}
+          className="fixed inset-0 z-50 md:hidden flex flex-col justify-between bg-[#0a0a0a]/95 backdrop-blur-3xl text-white select-none overflow-hidden"
+        >
             {/* Subtle Ambient Background Glow (Uniform & Seamless) */}
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 rounded-full bg-[#1DB954]/10 blur-[100px] pointer-events-none -z-10" />
 
@@ -291,190 +285,7 @@ export function MaximizedPlayer() {
                 </div>
               </div>
             </footer>
-          </motion.div>
-
-          {/* =========================================================================
-              2. DESKTOP CENTERED SHOWCASE MODAL (hidden md:flex)
-              Glassmorphic showcase dialog with circular vinyl art and radial scrubber
-             ========================================================================= */}
-          <div
-            onClick={() => setIsExpanded(false)}
-            className="fixed inset-0 z-50 hidden md:flex items-center justify-center p-6 bg-black/80 backdrop-blur-md animate-in fade-in duration-200"
-          >
-            <motion.div
-              key="maximized-player-desktop"
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              transition={{ type: "spring", damping: 28, stiffness: 320 }}
-              onClick={(e) => e.stopPropagation()}
-              className="max-w-md w-full rounded-3xl bg-[#121212]/95 backdrop-blur-3xl border border-white/10 p-7 shadow-2xl space-y-6 relative overflow-hidden select-none"
-            >
-              {/* Ambient Glow */}
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 rounded-full bg-[#1DB954]/15 blur-3xl pointer-events-none -z-10" />
-
-              {/* Desktop Header Row */}
-              <div className="flex items-center justify-between gap-3 border-b border-white/10 pb-4">
-                <div className="min-w-0 flex-1">
-                  <div className="text-[10px] uppercase font-bold text-[#1DB954] tracking-wider mb-0.5">
-                    Now Playing Preview
-                  </div>
-                  <h3 className="text-lg font-bold text-white truncate">
-                    {activeTrack.name}
-                  </h3>
-                  <p className="text-xs text-neutral-400 truncate">
-                    {artistName || "Concert Artist"}
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsExpanded(false)}
-                    className="w-9 h-9 rounded-full bg-white/5 hover:bg-white/15 border border-white/10 text-neutral-400 hover:text-white flex items-center justify-center transition-all cursor-pointer"
-                    title="Close"
-                    aria-label="Close"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Centerpiece: Spinning Vinyl & Horseshoe Gauge Arc */}
-              <div className="flex items-center justify-center py-2 relative">
-                {/* Outer Concentric Halo */}
-                <div className="relative w-64 h-64 rounded-full border border-white/10 bg-white/[0.02] backdrop-blur-md flex items-center justify-center shadow-xl">
-                  {/* SVG Open Horseshoe Radial Gauge (Read-only, non-interactive) */}
-                  <svg
-                    viewBox={`0 0 ${svgSize} ${svgSize}`}
-                    className="absolute inset-0 w-full h-full pointer-events-none select-none"
-                  >
-                    {/* Background Open Horseshoe Track */}
-                    <path
-                      d={gaugePathD}
-                      fill="none"
-                      stroke="rgba(255, 255, 255, 0.1)"
-                      strokeWidth={strokeWidth}
-                      strokeLinecap="round"
-                    />
-                    {/* Glowing Spotify Green Progress Arc */}
-                    <path
-                      d={gaugePathD}
-                      fill="none"
-                      stroke="#1DB954"
-                      strokeWidth={strokeWidth}
-                      strokeLinecap="round"
-                      strokeDasharray={arcLength}
-                      strokeDashoffset={strokeDashoffset}
-                      className="transition-[stroke-dashoffset] duration-150 ease-linear"
-                      style={{
-                        filter: "drop-shadow(0 0 6px rgba(29, 185, 84, 0.7))",
-                      }}
-                    />
-                  </svg>
-
-                  {/* Inner Spinning Circular Vinyl Disc */}
-                  <div
-                    className="w-44 h-44 rounded-full overflow-hidden relative shadow-2xl ring-2 ring-white/15 bg-neutral-900 flex items-center justify-center z-10 animate-spin-record"
-                    style={{
-                      animationPlayState: isPlaying ? "running" : "paused",
-                    }}
-                  >
-                    {artworkUrl ? (
-                      <img
-                        src={artworkUrl}
-                        alt={activeTrack.name}
-                        className="w-full h-full object-cover select-none pointer-events-none"
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-gradient-to-tr from-neutral-800 to-neutral-900 flex items-center justify-center">
-                        <Music2 className="w-12 h-12 text-[#1DB954]" />
-                      </div>
-                    )}
-                    <div className="absolute w-8 h-8 rounded-full bg-black/60 border border-white/20 backdrop-blur-md flex items-center justify-center shadow-inner pointer-events-none">
-                      <div className="w-2.5 h-2.5 rounded-full bg-white/80" />
-                    </div>
-                  </div>
-
-                  {/* Time Badge (Nestled cleanly in bottom gap) */}
-                  <div className="absolute bottom-2 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-black/75 border border-white/15 backdrop-blur-md text-[11px] font-mono font-bold tracking-wider text-white shadow-xl z-20 flex items-center gap-1.5 pointer-events-none select-none">
-                    <span className="text-[#1DB954]">
-                      {formatTime(currentTime)}
-                    </span>
-                    <span className="text-zinc-500">/</span>
-                    <span className="text-zinc-400">
-                      {formatTime(duration || 30)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Desktop Controls - Symmetrical 5-Button Row */}
-              <div className="w-full grid grid-cols-5 items-center justify-items-center max-w-xs mx-auto pt-2">
-                <button
-                  type="button"
-                  onClick={toggleLoop}
-                  className={`p-2.5 rounded-full transition-all cursor-pointer active:scale-90 flex items-center justify-center ${
-                    isLooping
-                      ? "text-[#1DB954] bg-[#1DB954]/15 border border-[#1DB954]/30"
-                      : "text-neutral-400 hover:text-white"
-                  }`}
-                  title={isLooping ? "Disable Repeat" : "Enable Repeat"}
-                  aria-label={isLooping ? "Disable Repeat" : "Enable Repeat"}
-                >
-                  <Repeat className="w-4 h-4" />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={skipPrevious}
-                  className="p-2.5 rounded-full text-white/90 hover:text-white active:scale-90 transition-all cursor-pointer flex items-center justify-center"
-                  title="Previous Track"
-                  aria-label="Previous Track"
-                >
-                  <SkipBack className="w-6 h-6 fill-current" />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleTogglePlayPause}
-                  disabled={isLoadingAudio}
-                  className="w-14 h-14 rounded-full bg-white text-black flex items-center justify-center shadow-xl hover:scale-105 active:scale-95 transition-transform cursor-pointer disabled:opacity-75"
-                  title={isPlaying ? "Pause" : "Play"}
-                  aria-label={isPlaying ? "Pause" : "Play"}
-                >
-                  {isLoadingAudio ? (
-                    <Loader2 className="w-6 h-6 animate-spin text-black" />
-                  ) : isPlaying ? (
-                    <Pause className="w-6 h-6 fill-black text-black" />
-                  ) : (
-                    <Play className="w-6 h-6 fill-black text-black ml-0.5" />
-                  )}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={skipNext}
-                  className="p-2.5 rounded-full text-white/90 hover:text-white active:scale-90 transition-all cursor-pointer flex items-center justify-center"
-                  title="Next Track"
-                  aria-label="Next Track"
-                >
-                  <SkipForward className="w-6 h-6 fill-current" />
-                </button>
-
-                <div
-                  className="p-2 text-neutral-400 flex items-center justify-center gap-1 text-xs font-mono select-none"
-                  title={`Track ${currentIndex !== -1 ? currentIndex + 1 : 1} of ${queue.length || 1}`}
-                >
-                  <ListMusic className="w-4 h-4 text-neutral-400" />
-                  <span>
-                    {currentIndex !== -1 ? currentIndex + 1 : 1}/{queue.length || 1}
-                  </span>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        </>
+        </motion.div>
       )}
     </AnimatePresence>
   );

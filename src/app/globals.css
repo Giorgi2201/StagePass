@@ -147,3 +147,37 @@ textarea {
   scrollbar-width: none;
 }
 
+/* CSS Typed Object Properties for smooth animated edge fades */
+@property --fade-left-size {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+@property --fade-right-size {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+/* Smooth dynamic edge fade gradient mask for horizontal scrolling containers */
+.scroll-fade-both {
+  --fade-left-size: 0px;
+  --fade-right-size: 0px;
+  mask-image: linear-gradient(
+    to right,
+    transparent 0px,
+    black var(--fade-left-size, 0px),
+    black calc(100% - var(--fade-right-size, 0px)),
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0px,
+    black var(--fade-left-size, 0px),
+    black calc(100% - var(--fade-right-size, 0px)),
+    transparent 100%
+  );
+  transition: --fade-left-size 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              --fade-right-size 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}

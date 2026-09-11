@@ -16,6 +16,7 @@ import {
   ListMusic,
 } from "lucide-react";
 import { mediumTap, tickHaptic } from "@/lib/haptics";
+import { useScrollFade } from "@/hooks/useScrollFade";
 
 interface TrendingTour {
   id: string; // MusicBrainz ID (mbid)
@@ -156,6 +157,9 @@ export function ToursView() {
   const [loadingShowId, setLoadingShowId] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
 
+  // Dynamic smooth scroll fade observer for popular city chips
+  const popularCitiesScroll = useScrollFade<HTMLDivElement>({ fadeSize: 20 });
+
   // Fetch concerts by city
   const fetchCityShows = useCallback(async (city: string) => {
     const trimmed = city.trim();
@@ -252,7 +256,7 @@ export function ToursView() {
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
+    <div className="w-full space-y-8 animate-in fade-in duration-300">
       {/* View Header */}
       <div className="pb-4 border-b border-neutral-800/80 space-y-1">
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-500/10 border border-orange-500/30 text-orange-400 text-xs font-bold uppercase tracking-wider mb-1">
@@ -315,7 +319,7 @@ export function ToursView() {
 
       {/* VIEW: Active World Tours */}
       {viewMode === "tours" && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in duration-200">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-5 animate-in fade-in duration-200">
           {WORLD_TOURS.map((tour) => {
             const isLoading = loadingTourId === tour.id;
 
@@ -429,25 +433,32 @@ export function ToursView() {
             </div>
 
             {/* Quick-Tap City Chips */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar pt-1">
-              <span className="text-xs text-neutral-400 font-medium shrink-0">Popular:</span>
-              {POPULAR_CITIES.map((city) => {
-                const isSelected = Boolean(searchedCity) && city.toLowerCase() === searchedCity.toLowerCase();
-                return (
-                  <button
-                    key={city}
-                    type="button"
-                    onClick={() => handleSelectCityChip(city)}
-                    className={`text-xs font-medium px-3 py-1.5 rounded-full transition-all shrink-0 cursor-pointer ${
-                      isSelected
-                        ? "bg-white/15 border border-white/25 text-white"
-                        : "bg-white/5 hover:bg-white/10 border border-white/10 text-neutral-300 hover:text-white"
-                    }`}
-                  >
-                    {city}
-                  </button>
-                );
-              })}
+            <div className="flex items-center gap-2 max-w-full">
+              <span className="text-xs text-neutral-400 font-medium shrink-0 select-none">
+                Popular:
+              </span>
+              <div
+                ref={popularCitiesScroll}
+                className="flex-1 min-w-0 flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar pt-1 scroll-fade-both"
+              >
+                {POPULAR_CITIES.map((city) => {
+                  const isSelected = Boolean(searchedCity) && city.toLowerCase() === searchedCity.toLowerCase();
+                  return (
+                    <button
+                      key={city}
+                      type="button"
+                      onClick={() => handleSelectCityChip(city)}
+                      className={`text-xs font-medium px-3 py-1.5 rounded-full transition-all shrink-0 cursor-pointer ${
+                        isSelected
+                          ? "bg-white/15 border border-white/25 text-white"
+                          : "bg-white/5 hover:bg-white/10 border border-white/10 text-neutral-300 hover:text-white"
+                      }`}
+                    >
+                      {city}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
 
@@ -467,8 +478,8 @@ export function ToursView() {
 
           {/* Loading Skeletons */}
           {isLoadingCity && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
-              {Array.from({ length: 6 }).map((_, idx) => (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-5">
+              {Array.from({ length: 8 }).map((_, idx) => (
                 <div
                   key={idx}
                   className="rounded-2xl bg-[#181818] border border-white/10 p-4 flex flex-col justify-between space-y-4 animate-pulse"
@@ -495,7 +506,7 @@ export function ToursView() {
 
           {/* Results Grid */}
           {!isLoadingCity && cityShows.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-5">
               {cityShows.map((show) => {
                 const isLoadingShow = loadingShowId === show.id;
 

@@ -17,7 +17,7 @@ export default function Home() {
   const { activeTrack } = useAudio();
 
   // Dynamic outer scroll clearance: pb-40 on mobile when mini-player is docked, pb-28 when idle
-  const mainScrollClass = `w-full max-w-5xl mx-auto px-3 sm:px-6 py-4 sm:py-8 ${
+  const mainScrollClass = `w-full max-w-[1600px] mx-auto px-4 sm:px-6 md:px-10 lg:px-12 py-4 md:py-8 ${
     activeTrack ? "pb-40" : "pb-28"
   } md:pb-12 flex-1 flex flex-col relative z-10 transition-all duration-300`;
 
@@ -27,7 +27,7 @@ export default function Home() {
         {/* Inline Document Skeleton */}
         {isLoading ? (
           <main className={mainScrollClass}>
-            <div className="p-6 sm:p-8 rounded-2xl bg-[#181818] border border-[#282828] animate-pulse space-y-4">
+            <div className="animate-pulse space-y-4">
               <div className="h-6 w-36 bg-[#242424] rounded-full" />
               <div className="h-10 w-2/3 bg-[#242424] rounded-lg" />
               <div className="h-4 w-1/2 bg-[#242424] rounded" />
@@ -38,27 +38,21 @@ export default function Home() {
               MY STUBS ARCHIVE TAB VIEW
              ========================================================= */
           <main className={mainScrollClass}>
-            <div className="p-4 sm:p-8 rounded-2xl bg-[#181818] border border-[#282828] shadow-2xl">
-              <StubsView />
-            </div>
+            <StubsView />
           </main>
         ) : activeTab === "tours" ? (
           /* =========================================================
               TRENDING TOURS TAB VIEW
              ========================================================= */
           <main className={mainScrollClass}>
-            <div className="p-4 sm:p-8 rounded-2xl bg-[#181818] border border-[#282828] shadow-2xl">
-              <ToursView />
-            </div>
+            <ToursView />
           </main>
         ) : activeTab === "profile" ? (
           /* =========================================================
               USER PROFILE & SETTINGS TAB VIEW
              ========================================================= */
           <main className={mainScrollClass}>
-            <div className="p-4 sm:p-8 rounded-2xl bg-[#181818] border border-[#282828] shadow-2xl">
-              <ProfileView />
-            </div>
+            <ProfileView />
           </main>
         ) : (
           /* =========================================================
@@ -67,9 +61,7 @@ export default function Home() {
               to authenticated users and guests alike.
              ========================================================= */
           <main className={mainScrollClass}>
-            <div className="p-4 sm:p-8 rounded-2xl bg-[#181818] border border-[#282828] shadow-2xl">
-              <WizardContainer />
-            </div>
+            <WizardContainer />
           </main>
         )}
 
