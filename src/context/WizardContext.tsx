@@ -173,6 +173,14 @@ export function WizardProvider({ children }: { children: React.ReactNode }) {
   const selectShow = useCallback(
     async (show: NormalizedShow) => {
       setSelectedShow(show);
+      setModeState("memory");
+      if (show.artistName) {
+        setSelectedArtist({
+          id: show.artistMbid || show.id,
+          name: show.artistName,
+          imageUrl: show.artistImageUrl || null,
+        });
+      }
       setIsLoadingParse(true);
       setErrorMessage(null);
 

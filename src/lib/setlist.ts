@@ -10,6 +10,7 @@ import type {
   RawSong,
   SetlistParseResult,
 } from "@/types/setlist";
+import { getClientCredentialsToken } from "@/lib/spotify";
 
 const SETLIST_FM_BASE_URL = "https://api.setlist.fm/rest/1.0";
 
@@ -432,10 +433,12 @@ export async function getArtistShows(
         id: s.id,
         eventDate: s.eventDate,
         artistName: s.artist?.name || "Unknown Artist",
+        artistMbid: s.artist?.mbid || mbid || "",
+        artistImageUrl: null,
         venueName: s.venue?.name || "Unknown Venue",
         cityName: s.venue?.city?.name || "Unknown City",
         countryName: s.venue?.city?.country?.name || "",
-        tourName: s.tour?.name,
+        tourName: s.tour?.name || "",
         songCount,
       };
     })
@@ -724,3 +727,175 @@ export function calculateRehearsalConsensus(
     totalTracks: tracks.length,
   };
 }
+
+/**
+ * Search recent concerts by city name using Setlist.fm's public search endpoint,
+ * filter for completed shows with recorded setlists, and enrich each concert with
+ * the headlining artist's Spotify profile picture via Client Credentials.
+ */
+export async function searchSetlistsByCity(
+  cityName: string,
+  page: number = 1
+): Promise<NormalizedShow[]> {
+  // 1. Sanitize Input: Trim whitespace and decode/clean the city name string
+  let cleanCity = cityName ? cityName.trim() : "";
+  try {
+    cleanCity = decodeURIComponent(cleanCity).trim();
+  } catch {
+    // Keep trimmed string if decode fails
+  }
+  cleanCity = cleanCity.replace(/["']/g, "").replace(/\s+/g, " ").trim();
+  if (!cleanCity || cleanCity.length < 2) {
+    return [];
+  }
+
+  // 2. Upstream Setlist.fm Query
+  const page1Data = await fetchSetlistFm<RawSetlistsResponse>(
+    `/search/setlists?cityName=${encodeURIComponent(cleanCity)}&p=${page}`
+  );
+
+  if (!page1Data || !page1Data.setlist) {
+    return [];
+  }
+
+  const allRawSetlists: RawSetlist[] = Array.isArray(page1Data.setlist)
+    ? [...page1Data.setlist]
+    : [page1Data.setlist];
+
+  // 3. Defensive Setlist Filtering
+  let playableShows = allRawSetlists.filter(
+    (s) => countSongsInSetlist(s) > 0
+  );
+
+  // If Page 1 yields fewer than 6 shows with setlists (due to upcoming empty dates),
+  // fetch Page 2 and subsequent pages (up to page 6) to collect completed concerts
+  if (page === 1 && playableShows.length < 6 && page1Data.total && page1Data.total > 20) {
+    const totalPages = Math.min(
+      Math.ceil(page1Data.total / (page1Data.itemsPerPage || 20)),
+      6
+    );
+
+    for (let p = 2; p <= totalPages; p++) {
+      try {
+        // Small delay to respect Setlist.fm rate limit (2 req/sec)
+        await new Promise((resolve) => setTimeout(resolve, 550));
+        const pageData = await fetchSetlistFm<RawSetlistsResponse>(
+          `/search/setlists?cityName=${encodeURIComponent(cleanCity)}&p=${p}`
+        );
+
+        if (pageData?.setlist) {
+          const pageSetlists = Array.isArray(pageData.setlist)
+            ? pageData.setlist
+            : [pageData.setlist];
+          allRawSetlists.push(...pageSetlists);
+          playableShows = allRawSetlists.filter(
+            (s) => countSongsInSetlist(s) > 0
+          );
+        }
+
+        if (playableShows.length >= 6) {
+          break;
+        }
+      } catch (err) {
+        console.warn(`Failed to fetch page ${p} setlists for city "${cleanCity}":`, err);
+        break;
+      }
+    }
+  }
+
+  // Map to NormalizedShow objects
+  const normalizedShows: NormalizedShow[] = playableShows.map((s) => {
+    const songCount = countSongsInSetlist(s);
+    return {
+      id: s.id,
+      eventDate: s.eventDate,
+      artistName: s.artist?.name || "Unknown Artist",
+      artistMbid: s.artist?.mbid || "",
+      artistImageUrl: null,
+      venueName: s.venue?.name || "Unknown Venue",
+      cityName: s.venue?.city?.name || cleanCity,
+      countryName: s.venue?.city?.country?.name || "",
+      tourName: s.tour?.name || "",
+      songCount,
+    };
+  });
+
+  // Deduplicate by show id
+  const uniqueShowsMap = new Map<string, NormalizedShow>();
+  for (const show of normalizedShows) {
+    if (!uniqueShowsMap.has(show.id)) {
+      uniqueShowsMap.set(show.id, show);
+    }
+  }
+  const dedupedShows = Array.from(uniqueShowsMap.values());
+
+  // Sort by event date descending so the most recent completed concerts appear first
+  dedupedShows.sort(
+    (a, b) => parseEventDate(b.eventDate) - parseEventDate(a.eventDate)
+  );
+
+  // Take the top 15 most recent completed concerts
+  const topShows = dedupedShows.slice(0, 15);
+
+  // 4. Spotify Artist Artwork Enrichment
+  const uniqueArtistNames = Array.from(
+    new Set(
+      topShows
+        .map((s) => s.artistName)
+        .filter((name) => Boolean(name && name !== "Unknown Artist"))
+    )
+  );
+
+  let spotifyToken: string | null = null;
+  try {
+    spotifyToken = await getClientCredentialsToken();
+  } catch (err) {
+    console.warn("Failed to get Spotify client credentials token for city enrichment:", err);
+  }
+
+  const artistImageMap = new Map<string, string | null>();
+
+  if (spotifyToken && uniqueArtistNames.length > 0) {
+    await Promise.all(
+      uniqueArtistNames.map(async (artistName) => {
+        try {
+          const cleanArtist = artistName.replace(/["']/g, "").trim();
+          const spotifyUrl = `https://api.spotify.com/v1/search?q=${encodeURIComponent(
+            `artist:"${cleanArtist}"`
+          )}&type=artist&limit=1`;
+
+          const res = await fetch(spotifyUrl, {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${spotifyToken}`,
+              Accept: "application/json",
+            },
+            next: { revalidate: 86400 },
+          });
+
+          if (!res.ok) {
+            artistImageMap.set(artistName, null);
+            return;
+          }
+
+          const data = await res.json();
+          const artistItem = data.artists?.items?.[0];
+          const imgUrl =
+            artistItem?.images?.[1]?.url ||
+            artistItem?.images?.[0]?.url ||
+            null;
+          artistImageMap.set(artistName, imgUrl);
+        } catch (err) {
+          console.warn(`[Spotify] Failed to enrich artwork for "${artistName}":`, err);
+          artistImageMap.set(artistName, null);
+        }
+      })
+    );
+  }
+
+  return topShows.map((show) => ({
+    ...show,
+    artistImageUrl: artistImageMap.get(show.artistName) || null,
+  }));
+}
+

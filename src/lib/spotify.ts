@@ -663,7 +663,7 @@ let cachedAppToken: { token: string; expiresAt: number } | null = null;
 /**
  * Retrieves a client credentials access token for public Spotify catalog searches
  */
-async function getClientCredentialsToken(): Promise<string | null> {
+export async function getClientCredentialsToken(): Promise<string | null> {
   if (cachedAppToken && Date.now() < cachedAppToken.expiresAt - 60000) {
     return cachedAppToken.token;
   }

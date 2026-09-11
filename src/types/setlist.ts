@@ -103,11 +103,20 @@ export interface NormalizedShow {
   id: string;
   eventDate: string;
   artistName: string;
+  artistMbid: string;
+  artistImageUrl: string | null;
   venueName: string;
   cityName: string;
   countryName: string;
-  tourName?: string;
+  tourName: string;
   songCount: number;
+}
+
+export interface CitySearchResponse {
+  success: boolean;
+  cityName: string;
+  shows: NormalizedShow[];
+  totalFound: number;
 }
 
 export interface NormalizedTrack {
