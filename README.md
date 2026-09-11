@@ -32,7 +32,7 @@ Transform real live concert setlists into verified Spotify & YouTube playlists a
    - Customizable playlist title and public / private visibility switch.
 4. **Step 4 — Dual Export & Digital Stubs**:
    - Step-by-step live generation progress tracker.
-   - 1-tap launch buttons for Spotify, YouTube, and YouTube Music.
+   - 1-tap launch buttons for Spotify and YouTube.
    - 1-tap Universal Plain Text tracklist copy for SongShift / TuneMyMusic (Apple Music, Tidal, Amazon Music).
    - Unmatched tracks inspector detailing songs not found in streaming catalogs.
    - Direct launch into the Commemorative Digital Ticket Stub Studio.
